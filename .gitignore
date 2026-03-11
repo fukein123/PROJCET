@@ -1,0 +1,13 @@
+## Java / Maven
+backend/target/
+*.iml
+.idea/
+
+## Node / Vite
+admin/node_modules/
+admin/dist/
+
+## OS / misc
+.DS_Store
+Thumbs.db
+

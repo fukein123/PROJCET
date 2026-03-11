@@ -1,0 +1,36 @@
+:root{
+  --cvs-bg: #f5f7fb;
+  --cvs-card: #ffffff;
+  --cvs-text: #1f2329;
+  --cvs-subtext: #667085;
+  --cvs-border: rgba(15,23,42,0.08);
+  --cvs-primary: #d81e2b;
+  --cvs-radius: 14px;
+}
+
+html,body{
+  height: 100%;
+}
+
+body{
+  margin: 0;
+  background: var(--cvs-bg);
+  color: var(--cvs-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.cvs-page{
+  padding: 16px;
+}
+
+.cvs-card{
+  background: var(--cvs-card);
+  border: 1px solid var(--cvs-border);
+  border-radius: var(--cvs-radius);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.cvs-muted{
+  color: var(--cvs-subtext);
+}
+
