@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="fade-up">
     <SearchForm @search="load" @reset="resetQuery">
       <el-form-item label="关键词">
@@ -31,19 +31,21 @@
           </template>
         </el-table-column>
         <el-table-column prop="title" label="活动名称" min-width="180" />
-        <el-table-column prop="address" label="活动地址" min-width="180" />
+        <el-table-column prop="content" label="活动内容" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="address" label="活动地点" min-width="180" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="targetCount" label="目标人数" width="90" />
+        <el-table-column prop="volunteerQuota" label="志愿者人数" width="110" />
+        <el-table-column prop="targetCount" label="目标人数" width="100" />
         <el-table-column label="时间" min-width="220">
           <template #default="{ row }">
             {{ formatTime(row.startTime) }} - {{ formatTime(row.endTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180">
+        <el-table-column label="操作" width="190">
           <template #default="{ row }">
             <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button link type="danger" @click="removeOne(row.id)">删除</el-button>
@@ -52,11 +54,13 @@
       </el-table>
       <div class="footer">
         <el-pagination
-          layout="total, prev, pager, next"
+          layout="total, sizes, prev, pager, next"
           :current-page="query.current"
           :page-size="query.size"
+          :page-sizes="[10, 20, 30, 50]"
           :total="total"
           @current-change="handlePage"
+          @size-change="handleSizeChange"
         />
       </div>
     </el-card>
@@ -64,45 +68,68 @@
     <el-drawer
       v-model="drawerVisible"
       :title="editingId ? '编辑活动' : '新增活动'"
-      size="min(92vw, 860px)"
+      size="min(92vw, 920px)"
       append-to-body
       class="activity-drawer"
     >
-      <el-form :model="form" label-position="top" class="drawer-form">
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="drawer-form">
         <div class="form-grid">
-          <el-form-item label="活动名称" class="span-2">
+          <el-form-item label="活动名称" prop="title" class="span-2">
             <el-input v-model="form.title" />
           </el-form-item>
-          <el-form-item label="活动分类">
+
+          <el-form-item label="活动分类" prop="categoryId">
             <el-select v-model="form.categoryId">
               <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="状态">
+          <el-form-item label="状态" prop="status">
             <el-select v-model="form.status">
               <el-option label="已发布" value="PUBLISHED" />
               <el-option label="进行中" value="ONGOING" />
               <el-option label="已结束" value="ENDED" />
             </el-select>
           </el-form-item>
-          <el-form-item label="开始时间">
+
+          <el-form-item label="活动时间（范围）" class="span-2">
+            <el-date-picker
+              v-model="activityRange"
+              type="datetimerange"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              range-separator="至"
+              start-placeholder="开始时间"
+              end-placeholder="结束时间"
+              @change="syncRangeToTime"
+            />
+          </el-form-item>
+
+          <el-form-item label="开始时间" prop="startTime">
             <el-date-picker v-model="form.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" />
           </el-form-item>
-          <el-form-item label="结束时间">
+          <el-form-item label="结束时间" prop="endTime">
             <el-date-picker v-model="form.endTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" />
           </el-form-item>
-          <el-form-item label="活动地址" class="span-2">
+
+          <el-form-item label="活动内容" prop="content" class="span-2">
+            <el-input
+              v-model="form.content"
+              maxlength="200"
+              show-word-limit
+              placeholder="例如：河道垃圾清理、分类回收与环保宣导"
+            />
+          </el-form-item>
+
+          <el-form-item label="活动地点" prop="address" class="span-2">
             <el-input v-model="form.address" />
           </el-form-item>
-          <el-form-item label="目标人数">
+
+          <el-form-item label="志愿者人数" prop="volunteerQuota">
+            <el-input-number v-model="form.volunteerQuota" :min="1" />
+          </el-form-item>
+          <el-form-item label="目标人数" prop="targetCount">
             <el-input-number v-model="form.targetCount" :min="1" />
           </el-form-item>
-          <el-form-item label="纬度">
-            <el-input-number v-model="form.latitude" :precision="6" :step="0.000001" />
-          </el-form-item>
-          <el-form-item label="经度">
-            <el-input-number v-model="form.longitude" :precision="6" :step="0.000001" />
-          </el-form-item>
+
           <el-form-item label="活动封面" class="span-2">
             <div class="uploader">
               <img :src="form.coverImage || defaultCover" class="cover-preview" alt="活动封面" />
@@ -119,12 +146,13 @@
               </div>
             </div>
           </el-form-item>
-          <el-form-item label="活动详细描述" class="span-2">
+
+          <el-form-item label="活动详细描述" prop="description" class="span-2">
             <el-input
               v-model="form.description"
               type="textarea"
               rows="9"
-              placeholder="建议包含：活动背景、服务内容、执行流程、注意事项、联系人与紧急预案"
+              placeholder="建议包含：活动背景、服务流程、注意事项、联系人、物资准备与应急预案"
             />
           </el-form-item>
         </div>
@@ -139,8 +167,8 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import type { FormInstance, FormRules, UploadProps, UploadRequestOptions } from 'element-plus'
 import dayjs from 'dayjs'
-import type { UploadProps, UploadRequestOptions } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SearchForm from '@/components/SearchForm.vue'
 import { uploadImageApi } from '@/api/common'
@@ -173,6 +201,8 @@ const drawerVisible = ref(false)
 const editingId = ref<number>()
 const categories = ref<ActivityCategory[]>([])
 const coverUploading = ref(false)
+const formRef = ref<FormInstance>()
+const activityRange = ref<[string, string] | []>([])
 
 const form = reactive<Partial<ActivityModel>>({
   title: '',
@@ -182,11 +212,29 @@ const form = reactive<Partial<ActivityModel>>({
   address: '',
   status: 'PUBLISHED',
   targetCount: 20,
+  volunteerQuota: 20,
+  content: '',
   description: '',
-  coverImage: '',
-  latitude: 31.2304,
-  longitude: 121.4737
+  coverImage: ''
 })
+
+const rules: FormRules = {
+  title: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
+  categoryId: [{ required: true, message: '请选择活动分类', trigger: 'change' }],
+  startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
+  endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }],
+  content: [{ required: true, message: '请输入活动内容', trigger: 'blur' }],
+  address: [{ required: true, message: '请输入活动地点', trigger: 'blur' }],
+  volunteerQuota: [{ required: true, message: '请输入志愿者人数', trigger: 'change' }],
+  targetCount: [{ required: true, message: '请输入目标人数', trigger: 'change' }],
+  description: [{ required: true, message: '请填写活动详细描述', trigger: 'blur' }]
+}
+
+function syncRangeToTime(value: [string, string] | null) {
+  if (!value) return
+  form.startTime = value[0]
+  form.endTime = value[1]
+}
 
 function handleSelectionChange(rows: ActivityModel[]) {
   selectedIds.value = rows.map((row) => row.id)
@@ -258,6 +306,12 @@ function handlePage(page: number) {
   load()
 }
 
+function handleSizeChange(size: number) {
+  query.size = size
+  query.current = 1
+  load()
+}
+
 function resetQuery() {
   query.current = 1
   query.keyword = ''
@@ -275,21 +329,29 @@ function openCreate() {
     address: '',
     status: 'PUBLISHED',
     targetCount: 20,
+    volunteerQuota: 20,
+    content: '',
     description: '',
-    coverImage: '',
-    latitude: 31.2304,
-    longitude: 121.4737
+    coverImage: ''
   })
+  activityRange.value = []
   drawerVisible.value = true
 }
 
 function openEdit(row: ActivityModel) {
   editingId.value = row.id
   Object.assign(form, row)
+  activityRange.value = [row.startTime, row.endTime]
   drawerVisible.value = true
 }
 
 async function submit() {
+  if (!formRef.value) return
+  await formRef.value.validate()
+  if (dayjs(form.endTime as string).isBefore(dayjs(form.startTime as string))) {
+    ElMessage.warning('结束时间必须晚于开始时间')
+    return
+  }
   if (editingId.value) {
     await updateActivityApi(editingId.value, form)
   } else {

@@ -33,10 +33,10 @@ CREATE TABLE IF NOT EXISTS activity (
     address VARCHAR(255) NOT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'PUBLISHED',
     target_count INT NOT NULL DEFAULT 1,
+    volunteer_quota INT NOT NULL DEFAULT 1,
+    content VARCHAR(500),
     description TEXT,
     cover_image VARCHAR(255),
-    latitude DECIMAL(10, 6),
-    longitude DECIMAL(10, 6),
     creator_id BIGINT,
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -57,6 +57,62 @@ SET @activity_cover_sql = IF(@activity_cover_exists = 0,
 PREPARE activity_cover_stmt FROM @activity_cover_sql;
 EXECUTE activity_cover_stmt;
 DEALLOCATE PREPARE activity_cover_stmt;
+
+SET @activity_volunteer_quota_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'activity'
+      AND COLUMN_NAME = 'volunteer_quota'
+);
+SET @activity_volunteer_quota_sql = IF(@activity_volunteer_quota_exists = 0,
+                                       'ALTER TABLE activity ADD COLUMN volunteer_quota INT NOT NULL DEFAULT 1 AFTER target_count',
+                                       'SELECT 1');
+PREPARE activity_volunteer_quota_stmt FROM @activity_volunteer_quota_sql;
+EXECUTE activity_volunteer_quota_stmt;
+DEALLOCATE PREPARE activity_volunteer_quota_stmt;
+
+SET @activity_content_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'activity'
+      AND COLUMN_NAME = 'content'
+);
+SET @activity_content_sql = IF(@activity_content_exists = 0,
+                               'ALTER TABLE activity ADD COLUMN content VARCHAR(500) NULL AFTER volunteer_quota',
+                               'SELECT 1');
+PREPARE activity_content_stmt FROM @activity_content_sql;
+EXECUTE activity_content_stmt;
+DEALLOCATE PREPARE activity_content_stmt;
+
+SET @activity_latitude_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'activity'
+      AND COLUMN_NAME = 'latitude'
+);
+SET @activity_latitude_sql = IF(@activity_latitude_exists = 1,
+                                'ALTER TABLE activity DROP COLUMN latitude',
+                                'SELECT 1');
+PREPARE activity_latitude_stmt FROM @activity_latitude_sql;
+EXECUTE activity_latitude_stmt;
+DEALLOCATE PREPARE activity_latitude_stmt;
+
+SET @activity_longitude_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'activity'
+      AND COLUMN_NAME = 'longitude'
+);
+SET @activity_longitude_sql = IF(@activity_longitude_exists = 1,
+                                 'ALTER TABLE activity DROP COLUMN longitude',
+                                 'SELECT 1');
+PREPARE activity_longitude_stmt FROM @activity_longitude_sql;
+EXECUTE activity_longitude_stmt;
+DEALLOCATE PREPARE activity_longitude_stmt;
 
 CREATE TABLE IF NOT EXISTS activity_application (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,

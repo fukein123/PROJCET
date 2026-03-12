@@ -1,7 +1,6 @@
 package com.community.modules.content.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.community.common.exception.BusinessException;
 import com.community.common.util.SecurityUtil;
 import com.community.common.web.PageResult;
@@ -23,6 +22,8 @@ import com.community.modules.content.mapper.ForumCategoryMapper;
 import com.community.modules.content.mapper.ForumPostMapper;
 import com.community.modules.content.mapper.InfoDynamicMapper;
 import com.community.modules.content.mapper.NoticeInfoMapper;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,15 +47,16 @@ public class ContentService {
     private final ActivityMapper activityMapper;
 
     public PageResult<InfoDynamic> pageDynamics(long current, long size, String type, String keyword, boolean onlyPublished) {
-        Page<InfoDynamic> page = new Page<>(current, size);
         LambdaQueryWrapper<InfoDynamic> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StringUtils.hasText(type), InfoDynamic::getType, type)
                 .and(StringUtils.hasText(keyword), q -> q.like(InfoDynamic::getTitle, keyword)
                         .or().like(InfoDynamic::getContent, keyword))
                 .eq(onlyPublished, InfoDynamic::getStatus, 1)
                 .orderByDesc(InfoDynamic::getPublishTime);
-        Page<InfoDynamic> result = infoDynamicMapper.selectPage(page, wrapper);
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+        PageHelper.startPage((int) current, (int) size);
+        List<InfoDynamic> records = infoDynamicMapper.selectList(wrapper);
+        PageInfo<InfoDynamic> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -102,12 +104,13 @@ public class ContentService {
     }
 
     public PageResult<NoticeInfo> pageNotices(long current, long size, boolean onlyPublished) {
-        Page<NoticeInfo> page = new Page<>(current, size);
         LambdaQueryWrapper<NoticeInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(onlyPublished, NoticeInfo::getStatus, 1)
                 .orderByDesc(NoticeInfo::getPublishTime);
-        Page<NoticeInfo> result = noticeInfoMapper.selectPage(page, wrapper);
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+        PageHelper.startPage((int) current, (int) size);
+        List<NoticeInfo> records = noticeInfoMapper.selectList(wrapper);
+        PageInfo<NoticeInfo> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -233,7 +236,6 @@ public class ContentService {
     }
 
     public PageResult<ForumPost> pageForumPosts(long current, long size, String keyword, String status, boolean onlyMine, boolean onlyApproved) {
-        Page<ForumPost> page = new Page<>(current, size);
         Long userId = SecurityUtil.currentUserId();
         String role = SecurityUtil.currentRole();
         boolean mineAndAuthenticated = onlyMine && userId != null;
@@ -253,8 +255,10 @@ public class ContentService {
             wrapper.eq(ForumPost::getStatus, "APPROVED");
         }
 
-        Page<ForumPost> result = forumPostMapper.selectPage(page, wrapper);
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+        PageHelper.startPage((int) current, (int) size);
+        List<ForumPost> records = forumPostMapper.selectList(wrapper);
+        PageInfo<ForumPost> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -314,22 +318,28 @@ public class ContentService {
 
     @Transactional(rollbackFor = Exception.class)
     public void addComment(CommentInfo comment) {
+        if (!StringUtils.hasText(comment.getContent())) {
+            throw new BusinessException("评论内容不能为空");
+        }
+        assertCommentTarget(comment.getTargetType(), comment.getTargetId());
         comment.setUserId(SecurityUtil.currentUserId());
+        comment.setContent(comment.getContent().trim());
         comment.setStatus(comment.getStatus() == null ? 1 : comment.getStatus());
         commentInfoMapper.insert(comment);
     }
 
-    public PageResult<CommentInfo> pageComments(long current, long size, boolean onlyMine, String targetType) {
-        Page<CommentInfo> page = new Page<>(current, size);
+    public PageResult<CommentInfo> pageComments(long current, long size, boolean onlyMine, String targetType, Long targetId) {
         Long userId = SecurityUtil.currentUserId();
         LambdaQueryWrapper<CommentInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(onlyMine && userId != null, CommentInfo::getUserId, userId)
                 .eq(StringUtils.hasText(targetType), CommentInfo::getTargetType, targetType)
+                .eq(targetId != null, CommentInfo::getTargetId, targetId)
                 .eq(CommentInfo::getStatus, 1)
-                .notLike(CommentInfo::getContent, "自动化冒烟评论")
                 .orderByDesc(CommentInfo::getCreateTime);
-        Page<CommentInfo> result = commentInfoMapper.selectPage(page, wrapper);
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+        PageHelper.startPage((int) current, (int) size);
+        List<CommentInfo> records = commentInfoMapper.selectList(wrapper);
+        PageInfo<CommentInfo> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -353,13 +363,13 @@ public class ContentService {
     }
 
     public PageResult<FavoriteActivity> pageFavorites(long current, long size) {
-        Page<FavoriteActivity> page = new Page<>(current, size);
-        Page<FavoriteActivity> result = favoriteActivityMapper.selectPage(page,
-                new LambdaQueryWrapper<FavoriteActivity>()
-                        .eq(FavoriteActivity::getUserId, SecurityUtil.currentUserId())
-                        .orderByDesc(FavoriteActivity::getPriority)
-                        .orderByDesc(FavoriteActivity::getCreateTime));
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+        PageHelper.startPage((int) current, (int) size);
+        List<FavoriteActivity> records = favoriteActivityMapper.selectList(new LambdaQueryWrapper<FavoriteActivity>()
+                .eq(FavoriteActivity::getUserId, SecurityUtil.currentUserId())
+                .orderByDesc(FavoriteActivity::getPriority)
+                .orderByDesc(FavoriteActivity::getCreateTime));
+        PageInfo<FavoriteActivity> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -440,6 +450,24 @@ public class ContentService {
         if (activity == null) {
             throw new BusinessException(404, "活动不存在");
         }
+    }
+
+    private void assertCommentTarget(String targetType, Long targetId) {
+        if (!StringUtils.hasText(targetType) || targetId == null) {
+            throw new BusinessException(400, "评论目标不完整");
+        }
+        if ("ACTIVITY".equalsIgnoreCase(targetType)) {
+            assertActivityExists(targetId);
+            return;
+        }
+        if ("POST".equalsIgnoreCase(targetType)) {
+            ForumPost post = forumPostMapper.selectById(targetId);
+            if (post == null) {
+                throw new BusinessException(404, "帖子不存在");
+            }
+            return;
+        }
+        throw new BusinessException("不支持的评论目标类型");
     }
 
     private int defaultPriority(Integer priority) {

@@ -9,6 +9,9 @@ public class RegisterRequest {
     @NotBlank(message = "请输入用户名")
     private String username;
 
+    @NotBlank(message = "请输入志愿者姓名")
+    private String realName;
+
     @NotBlank(message = "请输入密码")
     private String password;
 

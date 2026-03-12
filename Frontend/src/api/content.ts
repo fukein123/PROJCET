@@ -175,6 +175,7 @@ export function pageCommentsApi(params: {
   size: number
   onlyMine?: boolean
   targetType?: string
+  targetId?: number
 }) {
   return request.get<never, PageResult<CommentModel>>('/api/content/comments/page', { params })
 }

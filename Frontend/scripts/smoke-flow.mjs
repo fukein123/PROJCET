@@ -15,17 +15,10 @@ async function login(page) {
   await page.evaluate(() => {
     localStorage.clear()
     sessionStorage.clear()
+    localStorage.setItem('cvs:last-login-role', 'VOLUNTEER')
   })
   await page.context().clearCookies()
-  await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle' })
-
-  const roleSelect = page.locator('.auth-form .el-form-item').first().locator('.el-select').first()
-  if (await roleSelect.count()) {
-    await roleSelect.click()
-    const volunteerOption = page.locator('.el-select-dropdown__item', { hasText: '志愿者登录' }).first()
-    await volunteerOption.waitFor({ state: 'visible', timeout: 5000 })
-    await volunteerOption.click()
-  }
+  await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' })
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     await page.getByPlaceholder('请输入账号').fill(username)
@@ -39,7 +32,12 @@ async function login(page) {
       return
     } catch {
       if (attempt === 2) {
-        const message = await readToast(page)
+        let message = ''
+        try {
+          message = await readToast(page)
+        } catch {
+          message = '登录失败，未进入志愿者首页'
+        }
         throw new Error(message || '登录失败，未进入志愿者首页')
       }
       await page.locator('button.captcha').click()
@@ -48,7 +46,7 @@ async function login(page) {
 }
 
 async function applyActivity(page) {
-  await page.goto(`${baseUrl}/portal/activities`, { waitUntil: 'networkidle' })
+  await page.goto(`${baseUrl}/portal/activities`, { waitUntil: 'domcontentloaded' })
   const applyButton = page.getByRole('button', { name: '立即报名' }).first()
   await applyButton.waitFor({ state: 'visible', timeout: 12000 })
   await applyButton.click()
@@ -56,7 +54,7 @@ async function applyActivity(page) {
 }
 
 async function commentPost(page) {
-  await page.goto(`${baseUrl}/portal/forum`, { waitUntil: 'networkidle' })
+  await page.goto(`${baseUrl}/portal/forum`, { waitUntil: 'domcontentloaded' })
   const firstInput = page.locator('.comment-input input').first()
   await firstInput.waitFor({ state: 'visible', timeout: 12000 })
   await firstInput.fill(`社区服务体验反馈 ${new Date().toISOString()}`)
@@ -65,7 +63,7 @@ async function commentPost(page) {
 }
 
 async function logout(page) {
-  await page.goto(`${baseUrl}/portal`, { waitUntil: 'networkidle' })
+  await page.goto(`${baseUrl}/portal`, { waitUntil: 'domcontentloaded' })
   for (let i = 0; i < 2; i++) {
     const logoutButton = page.getByRole('button', { name: '退出' }).first()
     await logoutButton.waitFor({ state: 'visible', timeout: 12000 })

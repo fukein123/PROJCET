@@ -4,7 +4,7 @@
       <template #header>
         <div class="head">
           <div class="head-left">
-            <span>志愿者周统计排行</span>
+            <span class="title">志愿者周统计排行</span>
             <span class="sub">统计区间：{{ weekRangeText }}</span>
             <span class="sub">最近生成：{{ generatedText }}</span>
           </div>
@@ -22,18 +22,24 @@
         </div>
       </template>
 
+      <el-alert
+        title="统计口径：按周统计签到/签退记录，按服务分钟与完成场次综合排序。"
+        type="info"
+        show-icon
+        :closable="false"
+        class="tip"
+      />
+
       <el-table :data="list" border v-loading="loading" empty-text="该周暂无有效服务记录">
         <el-table-column prop="rankNo" label="排名" width="80" />
-        <el-table-column prop="username" label="用户名" min-width="140" />
+        <el-table-column prop="username" label="账号" min-width="140" />
         <el-table-column prop="realName" label="姓名" min-width="140" />
         <el-table-column prop="completedCount" label="完成场次" width="100" />
         <el-table-column prop="signInCount" label="签到次数" width="100" />
         <el-table-column prop="signOutCount" label="签退次数" width="100" />
         <el-table-column prop="serviceMinutes" label="服务分钟" width="110" />
         <el-table-column label="服务小时" width="110">
-          <template #default="{ row }">
-            {{ row.serviceHours }}h
-          </template>
+          <template #default="{ row }">{{ row.serviceHours }}h</template>
         </el-table-column>
       </el-table>
     </el-card>
@@ -111,6 +117,10 @@ onMounted(load)
   gap: 12px;
 }
 
+.title {
+  font-weight: 700;
+}
+
 .head-right {
   display: flex;
   align-items: center;
@@ -120,5 +130,9 @@ onMounted(load)
 .sub {
   color: var(--cvs-text-sub);
   font-size: 13px;
+}
+
+.tip {
+  margin-bottom: 12px;
 }
 </style>

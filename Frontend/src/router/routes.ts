@@ -125,6 +125,12 @@ export const privateRoutes: RouteRecordRaw[] = [
         meta: { title: '活动中心', icon: 'Calendar' }
       },
       {
+        path: 'activity-detail/:id',
+        name: 'VolunteerActivityDetail',
+        component: () => import('@/views/volunteer/VolunteerActivityDetailView.vue'),
+        meta: { title: '活动详情', hidden: true }
+      },
+      {
         path: 'apply-records',
         name: 'VolunteerApplyRecords',
         component: () => import('@/views/volunteer/VolunteerApplyRecordsView.vue'),

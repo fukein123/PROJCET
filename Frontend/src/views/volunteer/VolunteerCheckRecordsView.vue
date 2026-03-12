@@ -6,16 +6,6 @@
         <el-table-column prop="activityAddress" label="活动地点" min-width="180" />
         <el-table-column prop="signInTime" label="签到时间" min-width="170" />
         <el-table-column prop="signOutTime" label="签退时间" min-width="170" />
-        <el-table-column label="签到距离" width="110">
-          <template #default="{ row }">
-            {{ formatDistance(row.signInDistance) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="签退距离" width="110">
-          <template #default="{ row }">
-            {{ formatDistance(row.signOutDistance) }}
-          </template>
-        </el-table-column>
         <el-table-column label="服务时长" width="110">
           <template #default="{ row }">{{ toServiceHours(row.serviceMinutes) }}</template>
         </el-table-column>
@@ -59,11 +49,6 @@ function statusTag(status: string) {
   if (status === 'SIGNED_IN') return 'warning'
   if (status === 'FINISHED') return 'success'
   return 'info'
-}
-
-function formatDistance(distance?: number) {
-  if (distance === undefined || distance === null) return '-'
-  return `${Math.round(distance)}m`
 }
 
 function toServiceHours(minutes?: number) {

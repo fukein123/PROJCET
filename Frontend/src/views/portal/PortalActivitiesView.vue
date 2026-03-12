@@ -69,6 +69,15 @@
 
           <div v-if="!activities.length" class="empty">当前筛选条件下暂无活动</div>
         </section>
+        <div class="pager">
+          <el-pagination
+            layout="total, prev, pager, next"
+            :total="total"
+            :current-page="query.current"
+            :page-size="query.size"
+            @current-change="handlePage"
+          />
+        </div>
       </el-card>
     </main>
   </div>
@@ -98,8 +107,13 @@ const portalNav = usePortalNavigation()
 const keyword = ref('')
 const categories = ref<ActivityCategory[]>([])
 const activities = ref<ActivityModel[]>([])
+const total = ref(0)
 const hasAppliedFromQuery = ref(false)
 const selectedCategoryId = ref<number | undefined>()
+const query = ref({
+  current: 1,
+  size: 12
+})
 
 const coverList = [
   'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=900&q=80',
@@ -134,23 +148,31 @@ function statusTag(status: string) {
 
 async function load() {
   const res = await pageActivitiesApi({
-    current: 1,
-    size: 50,
+    current: query.value.current,
+    size: query.value.size,
     keyword: keyword.value || undefined,
     categoryId: selectedCategoryId.value,
     status: 'PUBLISHED'
   })
   activities.value = res.records
+  total.value = res.total
 }
 
 function changeCategory(categoryId: number | undefined) {
+  query.value.current = 1
   selectedCategoryId.value = categoryId
   load()
 }
 
 function reset() {
+  query.value.current = 1
   keyword.value = ''
   selectedCategoryId.value = undefined
+  load()
+}
+
+function handlePage(page: number) {
+  query.value.current = page
   load()
 }
 
@@ -329,6 +351,12 @@ onMounted(async () => {
   place-items: center;
   color: #75817c;
   grid-column: 1 / -1;
+}
+
+.pager {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 @media (max-width: 860px) {

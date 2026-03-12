@@ -41,3 +41,24 @@ export function adminUpdateUserApi(id: number, payload: Partial<UserModel>) {
   return request.put(`/api/users/${id}`, payload)
 }
 
+export function createVolunteerUserApi(payload: {
+  username: string
+  password: string
+  realName: string
+  email?: string
+  phone: string
+  gender?: string
+  avatar?: string
+  status?: number
+  certified?: number
+}) {
+  return request.post('/api/users', payload)
+}
+
+export function deleteVolunteerUserApi(id: number) {
+  return request.delete(`/api/users/${id}`)
+}
+
+export function batchDeleteVolunteerUsersApi(ids: number[]) {
+  return request.post('/api/users/batch-delete', { ids })
+}

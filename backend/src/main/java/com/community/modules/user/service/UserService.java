@@ -1,28 +1,35 @@
 package com.community.modules.user.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.community.common.exception.BusinessException;
 import com.community.common.util.SecurityUtil;
 import com.community.common.web.PageResult;
 import com.community.modules.user.dto.PasswordUpdateRequest;
+import com.community.modules.user.dto.UserCreateRequest;
 import com.community.modules.user.dto.UserUpdateRequest;
 import com.community.modules.user.entity.User;
 import com.community.modules.user.mapper.UserMapper;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private static final String DEFAULT_AVATAR =
+            "https://cdn.jsdelivr.net/gh/fukexin123/assets/default-avatar.png";
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
     public PageResult<User> pageUsers(long current, long size, String role, String keyword) {
-        Page<User> page = new Page<>(current, size);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StringUtils.hasText(role), User::getRole, role)
                 .and(StringUtils.hasText(keyword), query -> query
@@ -32,9 +39,27 @@ public class UserService {
                         .or()
                         .like(User::getPhone, keyword))
                 .orderByDesc(User::getCreateTime);
-        Page<User> result = userMapper.selectPage(page, wrapper);
-        result.getRecords().forEach(record -> record.setPassword(null));
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+        PageHelper.startPage((int) current, (int) size);
+        List<User> records = userMapper.selectList(wrapper);
+        records.forEach(record -> record.setPassword(null));
+        PageInfo<User> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
+    }
+
+    public void createVolunteer(UserCreateRequest request) {
+        ensureUsernameAvailable(request.getUsername(), null);
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRealName(request.getRealName());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
+        user.setGender(StringUtils.hasText(request.getGender()) ? request.getGender() : "UNKNOWN");
+        user.setAvatar(StringUtils.hasText(request.getAvatar()) ? request.getAvatar() : DEFAULT_AVATAR);
+        user.setRole("VOLUNTEER");
+        user.setStatus(request.getStatus() == null ? 1 : request.getStatus());
+        user.setCertified(request.getCertified() == null ? 0 : request.getCertified());
+        userMapper.insert(user);
     }
 
     public User getCurrentUser() {
@@ -111,6 +136,27 @@ public class UserService {
             user.setCertified(request.getCertified());
         }
         userMapper.updateById(user);
+    }
+
+    public void deleteVolunteer(Long id) {
+        User user = userMapper.selectById(id);
+        if (user == null) {
+            return;
+        }
+        if (!"VOLUNTEER".equalsIgnoreCase(user.getRole())) {
+            throw new BusinessException("仅允许删除志愿者账号");
+        }
+        userMapper.deleteById(id);
+    }
+
+    public void batchDeleteVolunteers(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(this::deleteVolunteer);
     }
 
     private void ensureUsernameAvailable(String username, Long excludeUserId) {

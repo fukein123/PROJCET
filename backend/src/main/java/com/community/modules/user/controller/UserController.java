@@ -1,8 +1,10 @@
 package com.community.modules.user.controller;
 
+import com.community.common.dto.IdListRequest;
 import com.community.common.web.ApiResponse;
 import com.community.common.web.PageResult;
 import com.community.modules.user.dto.PasswordUpdateRequest;
+import com.community.modules.user.dto.UserCreateRequest;
 import com.community.modules.user.dto.UserUpdateRequest;
 import com.community.modules.user.entity.User;
 import com.community.modules.user.service.UserService;
@@ -37,6 +39,30 @@ public class UserController {
         return ApiResponse.success("updated", null);
     }
 
+    @Operation(summary = "Admin - create volunteer user")
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> createVolunteer(@Valid @RequestBody UserCreateRequest request) {
+        userService.createVolunteer(request);
+        return ApiResponse.success("created", null);
+    }
+
+    @Operation(summary = "Admin - delete volunteer user")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteVolunteer(@PathVariable Long id) {
+        userService.deleteVolunteer(id);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch delete volunteer users")
+    @PostMapping("/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDeleteVolunteer(@Valid @RequestBody IdListRequest request) {
+        userService.batchDeleteVolunteers(request.getIds());
+        return ApiResponse.success("batch deleted", null);
+    }
+
     @Operation(summary = "Current user profile")
     @GetMapping("/me")
     public ApiResponse<User> me() {
@@ -57,4 +83,3 @@ public class UserController {
         return ApiResponse.success("updated", null);
     }
 }
-

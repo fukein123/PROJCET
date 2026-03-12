@@ -13,33 +13,43 @@
     <el-card class="module" shadow="never">
       <el-table :data="list" border v-loading="loading">
         <el-table-column prop="id" label="申请ID" width="90" />
-        <el-table-column prop="activityId" label="活动ID" width="90" />
-        <el-table-column prop="userId" label="用户ID" width="90" />
+        <el-table-column prop="activityTitle" label="活动名称" min-width="170" />
+        <el-table-column prop="username" label="账号" min-width="120" />
+        <el-table-column prop="realName" label="姓名" min-width="120" />
         <el-table-column prop="status" label="状态" width="120">
           <template #default="{ row }">
             <el-tag :type="tagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="rejectReason" label="拒绝理由" min-width="200" />
+        <el-table-column prop="rejectReason" label="拒绝理由" min-width="180" />
         <el-table-column prop="applyTime" label="申请时间" min-width="180" />
-        <el-table-column label="操作" width="170">
+        <el-table-column label="审核操作" width="220">
           <template #default="{ row }">
-            <el-button link type="success" :disabled="row.status !== 'PENDING'" @click="audit(row.id, 'APPROVED')">
-              通过
-            </el-button>
-            <el-button link type="danger" :disabled="row.status !== 'PENDING'" @click="reject(row.id)">
-              拒绝
-            </el-button>
+            <div class="audit-actions">
+              <el-button
+                type="success"
+                size="small"
+                :disabled="row.status !== 'PENDING'"
+                @click="audit(row.id, 'APPROVED')"
+              >
+                通过申请
+              </el-button>
+              <el-button type="danger" size="small" :disabled="row.status !== 'PENDING'" @click="reject(row.id)">
+                拒绝申请
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
       <div class="footer">
         <el-pagination
-          layout="total, prev, pager, next"
+          layout="total, sizes, prev, pager, next"
           :current-page="query.current"
           :page-size="query.size"
+          :page-sizes="[10, 20, 30, 50]"
           :total="total"
           @current-change="handlePage"
+          @size-change="handleSizeChange"
         />
       </div>
     </el-card>
@@ -48,7 +58,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import SearchForm from '@/components/SearchForm.vue'
 import { auditApplicationApi, pageApplicationsApi, type ApplicationModel } from '@/api/activity'
 
@@ -94,6 +104,12 @@ function handlePage(page: number) {
   load()
 }
 
+function handleSizeChange(size: number) {
+  query.size = size
+  query.current = 1
+  load()
+}
+
 function resetQuery() {
   query.current = 1
   query.status = ''
@@ -102,12 +118,13 @@ function resetQuery() {
 
 async function audit(id: number, status: string, rejectReason?: string) {
   await auditApplicationApi(id, { status, rejectReason })
+  ElMessage.success(status === 'APPROVED' ? '已通过申请' : '已拒绝申请')
   await load()
 }
 
 async function reject(id: number) {
-  const reason = await ElMessageBox.prompt('请输入拒绝理由', '审核拒绝', {
-    confirmButtonText: '确定',
+  const reason = await ElMessageBox.prompt('请输入拒绝理由', '拒绝申请', {
+    confirmButtonText: '确认拒绝',
     cancelButtonText: '取消',
     inputPlaceholder: '拒绝理由必填'
   })
@@ -121,6 +138,11 @@ onMounted(load)
 .module {
   border: 1px solid var(--cvs-border);
   border-radius: 16px;
+}
+
+.audit-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .footer {

@@ -1,13 +1,29 @@
 INSERT INTO sys_user (id, username, password, email, phone, gender, avatar, role, status, real_name, certified)
 VALUES (1, 'admin', '$2b$10$MdUnSo.DjQ85.dpOSxWW2eTv8RoIJNzNv1P7fcozYwpDsx3Bx6FQK', 'admin@cvs.local',
         '13800000000', 'UNKNOWN', 'https://cdn.jsdelivr.net/gh/fukexin123/assets/default-admin.png', 'ADMIN', 1, '社区管理员', 1)
-ON DUPLICATE KEY UPDATE username = VALUES(username);
+ON DUPLICATE KEY UPDATE username = VALUES(username),
+                        email = VALUES(email),
+                        phone = VALUES(phone),
+                        gender = VALUES(gender),
+                        avatar = VALUES(avatar),
+                        role = VALUES(role),
+                        status = VALUES(status),
+                        real_name = VALUES(real_name),
+                        certified = VALUES(certified);
 
 INSERT INTO sys_user (id, username, password, email, phone, gender, avatar, role, status, real_name, certified)
 VALUES (2, 'volunteer', '$2b$10$MdUnSo.DjQ85.dpOSxWW2eTv8RoIJNzNv1P7fcozYwpDsx3Bx6FQK', 'volunteer@cvs.local',
         '13900000000', 'UNKNOWN', 'https://cdn.jsdelivr.net/gh/fukexin123/assets/default-avatar.png', 'VOLUNTEER', 1,
         '李四', 1)
-ON DUPLICATE KEY UPDATE username = VALUES(username);
+ON DUPLICATE KEY UPDATE username = VALUES(username),
+                        email = VALUES(email),
+                        phone = VALUES(phone),
+                        gender = VALUES(gender),
+                        avatar = VALUES(avatar),
+                        role = VALUES(role),
+                        status = VALUES(status),
+                        real_name = VALUES(real_name),
+                        certified = VALUES(certified);
 
 INSERT INTO activity_category (id, name, description, sort, status)
 VALUES (1, '社区关爱', '面向社区老人和儿童开展便民服务与关爱行动', 1, 1),
@@ -41,24 +57,32 @@ VALUES (1, '周末河道清洁行动开启报名', '本次活动计划招募 30 
         'NEWS', 74, 1, DATE_SUB(NOW(), INTERVAL 2 DAY), 1)
 ON DUPLICATE KEY UPDATE title = VALUES(title);
 
-INSERT INTO activity (id, title, category_id, start_time, end_time, address, status, target_count, description, cover_image,
-                      latitude, longitude, creator_id)
+INSERT INTO activity (id, title, category_id, start_time, end_time, address, status, target_count, volunteer_quota, content,
+                      description, cover_image, creator_id)
 VALUES (1, '河道环保清洁行动', 2, DATE_ADD(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 1 DAY) + INTERVAL 2 HOUR,
-        '合肥市包河区滨湖文化广场', 'PUBLISHED', 30,
+        '合肥市包河区滨湖文化广场', 'PUBLISHED', 30, 30, '河道垃圾清理、分类回收与环保宣导',
         '活动内容包括垃圾清理、分类回收和环保宣传，请参与人员穿着便于户外行动的服装。',
-        'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&w=900&q=80',
-        31.7467, 117.2516, 1),
+        'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&w=900&q=80', 1),
        (2, '社区老人手机课堂', 1, DATE_ADD(NOW(), INTERVAL 2 DAY), DATE_ADD(NOW(), INTERVAL 2 DAY) + INTERVAL 2 HOUR,
-        '蜀山区幸福家园社区中心', 'PUBLISHED', 25,
+        '蜀山区幸福家园社区中心', 'PUBLISHED', 25, 18, '老年智能手机基础操作与防诈骗宣讲',
         '帮助社区老人学习手机支付、挂号和防诈骗知识，活动结束后收集反馈持续优化。',
-        'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80',
-        31.8589, 117.2467, 1),
+        'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80', 1),
        (3, '周末义诊与健康宣教', 3, DATE_ADD(NOW(), INTERVAL 3 DAY), DATE_ADD(NOW(), INTERVAL 3 DAY) + INTERVAL 3 HOUR,
-        '社区卫生服务站', 'PUBLISHED', 20,
+        '社区卫生服务站', 'PUBLISHED', 20, 12, '基础义诊筛查、慢病咨询与健康知识讲解',
         '联合医护志愿者开展血压血糖检测、慢病咨询与健康知识宣教。',
-        'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=900&q=80',
-        31.8041, 117.2660, 1)
-ON DUPLICATE KEY UPDATE title = VALUES(title);
+        'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=900&q=80', 1)
+ON DUPLICATE KEY UPDATE title = VALUES(title),
+                        category_id = VALUES(category_id),
+                        start_time = VALUES(start_time),
+                        end_time = VALUES(end_time),
+                        address = VALUES(address),
+                        status = VALUES(status),
+                        target_count = VALUES(target_count),
+                        volunteer_quota = VALUES(volunteer_quota),
+                        content = VALUES(content),
+                        description = VALUES(description),
+                        cover_image = VALUES(cover_image),
+                        creator_id = VALUES(creator_id);
 
 INSERT INTO banner_info (id, title, image_url, activity_id, sort, status)
 VALUES (1, '河道环保清洁行动',
@@ -74,3 +98,21 @@ VALUES (1, '第一次参加河道清洁行动的感受', '和居民一起完成�
        (3, '社区志愿服务中的沟通技巧', '活动前明确分工、活动中及时反馈、活动后复盘总结，是提升效率的关键。', 1, 2, 'APPROVED',
         25)
 ON DUPLICATE KEY UPDATE title = VALUES(title);
+
+INSERT INTO activity_application (id, activity_id, user_id, status, reject_reason, apply_time, audit_time, auditor_id)
+VALUES (1, 1, 2, 'APPROVED', NULL, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY), 1),
+       (2, 2, 2, 'APPROVED', NULL, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY), 1)
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+INSERT INTO activity_check_record (id, activity_id, user_id, sign_in_time, sign_out_time, status)
+VALUES (1, 1, 2, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY) + INTERVAL 110 MINUTE, 'FINISHED'),
+       (2, 2, 2, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY) + INTERVAL 95 MINUTE, 'FINISHED')
+ON DUPLICATE KEY UPDATE sign_out_time = VALUES(sign_out_time);
+
+INSERT INTO comment_info (id, target_type, target_id, user_id, content, status)
+VALUES (1, 'ACTIVITY', 1, 2, '活动组织有序，物资准备充分，现场协作体验很好。', 1),
+       (2, 'ACTIVITY', 2, 2, '老人反馈积极，建议增加一对一辅导环节。', 1),
+       (3, 'POST', 1, 1, '内容很有启发，欢迎继续分享更多志愿经验。', 1)
+ON DUPLICATE KEY UPDATE content = VALUES(content);
+
+DELETE FROM comment_info WHERE content LIKE '%自动化冒烟评论%';

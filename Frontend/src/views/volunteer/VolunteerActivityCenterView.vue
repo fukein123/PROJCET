@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="fade-up">
     <SearchForm @search="load" @reset="reset">
       <el-form-item label="活动名称">
@@ -19,28 +19,32 @@
           </template>
         </el-table-column>
         <el-table-column prop="title" label="活动名称" min-width="180" />
+        <el-table-column prop="content" label="活动内容" min-width="180" show-overflow-tooltip />
         <el-table-column prop="address" label="活动地址" min-width="160" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="targetCount" label="目标人数" width="90" />
-        <el-table-column prop="description" label="活动说明" min-width="240" show-overflow-tooltip />
-        <el-table-column label="操作" width="180">
+        <el-table-column prop="volunteerQuota" label="志愿者人数" width="110" />
+        <el-table-column prop="targetCount" label="目标人数" width="100" />
+        <el-table-column label="操作" width="220">
           <template #default="{ row }">
-            <el-button type="primary" link @click="apply(row.id)">报名</el-button>
+            <el-button type="primary" link @click="toDetail(row.id)">查看详情</el-button>
+            <el-button type="success" link @click="apply(row.id)">报名</el-button>
             <el-button type="warning" link @click="favorite(row.id)">收藏</el-button>
           </template>
         </el-table-column>
       </el-table>
       <div class="footer">
         <el-pagination
-          layout="total, prev, pager, next"
+          layout="total, sizes, prev, pager, next"
           :total="total"
           :current-page="query.current"
           :page-size="query.size"
+          :page-sizes="[10, 20, 30, 50]"
           @current-change="handlePage"
+          @size-change="handleSizeChange"
         />
       </div>
     </el-card>
@@ -50,6 +54,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 import SearchForm from '@/components/SearchForm.vue'
 import {
   applyActivityApi,
@@ -59,6 +64,8 @@ import {
   type ActivityModel
 } from '@/api/activity'
 import { createFavoriteApi } from '@/api/content'
+
+const router = useRouter()
 
 const defaultCover =
   'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=700&q=80'
@@ -89,11 +96,21 @@ function handlePage(page: number) {
   load()
 }
 
+function handleSizeChange(size: number) {
+  query.size = size
+  query.current = 1
+  load()
+}
+
 function reset() {
   query.current = 1
   query.keyword = ''
   query.categoryId = undefined
   load()
+}
+
+function toDetail(activityId: number) {
+  router.push(`/volunteer/activity-detail/${activityId}`)
 }
 
 function statusLabel(status: string) {

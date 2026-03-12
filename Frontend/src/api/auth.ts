@@ -15,6 +15,7 @@ export interface LoginResult {
 
 export interface RegisterPayload {
   username: string
+  realName: string
   password: string
   confirmPassword: string
   email: string

@@ -63,6 +63,7 @@ public class AuthService {
         user.setPhone(request.getPhone());
         user.setGender(StrUtil.blankToDefault(request.getGender(), "UNKNOWN"));
         user.setAvatar(StrUtil.blankToDefault(request.getAvatar(), DEFAULT_AVATAR));
+        user.setRealName(request.getRealName());
         user.setRole("VOLUNTEER");
         user.setStatus(1);
         user.setCertified(0);

@@ -22,9 +22,9 @@ public class Activity extends BaseEntity {
     private String address;
     private String status;
     private Integer targetCount;
+    private Integer volunteerQuota;
+    private String content;
     private String description;
     private String coverImage;
-    private Double latitude;
-    private Double longitude;
     private Long creatorId;
 }

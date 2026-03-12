@@ -1,12 +1,12 @@
-﻿<template>
+<template>
   <div class="register-scene">
     <section class="register-hero fade-up">
       <p class="hero-tag">社区志愿服务平台</p>
-      <h1>创建志愿者账户，参与社区服务、论坛互动与活动打卡</h1>
+      <h1>成为社区志愿者，让每一份善意都能被看见</h1>
       <ul class="hero-list">
-        <li>实名认证后可报名活动，形成完整服务记录</li>
-        <li>支持上传头像，打造更可信的志愿者主页</li>
-        <li>全流程中文提示，降低上手门槛</li>
+        <li>坚持公益导向，围绕“服务社区、关爱邻里、共建共享”开展志愿行动</li>
+        <li>建立可追溯服务档案，完整记录报名、打卡、反馈与成长轨迹</li>
+        <li>倡导长期参与与互助精神，让志愿服务从“活动”走向“常态”</li>
       </ul>
     </section>
 
@@ -14,29 +14,14 @@
       <el-card class="register-card" shadow="never">
         <header class="card-head">
           <h2>志愿者注册</h2>
-          <p>请完善以下信息，提交后即可跳转登录</p>
+          <p>请按顺序完善账号信息，提交后将跳转到登录页面</p>
         </header>
 
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="register-form">
           <div class="form-grid">
-            <el-form-item label="用户名" prop="username">
-              <el-input v-model.trim="form.username" placeholder="请输入用户名" />
+            <el-form-item label="志愿者账号" prop="username">
+              <el-input v-model.trim="form.username" placeholder="请输入志愿者账号" />
             </el-form-item>
-            <el-form-item label="手机号" prop="phone">
-              <el-input v-model.trim="form.phone" placeholder="请输入手机号" />
-            </el-form-item>
-
-            <el-form-item label="邮箱" prop="email">
-              <el-input v-model.trim="form.email" placeholder="请输入邮箱地址" />
-            </el-form-item>
-            <el-form-item label="性别" prop="gender">
-              <el-select v-model="form.gender" placeholder="请选择性别">
-                <el-option label="男" value="MALE" />
-                <el-option label="女" value="FEMALE" />
-                <el-option label="保密" value="UNKNOWN" />
-              </el-select>
-            </el-form-item>
-
             <el-form-item label="密码" prop="password">
               <el-input
                 v-model="form.password"
@@ -45,27 +30,57 @@
                 placeholder="至少6位，包含字母和数字"
               />
             </el-form-item>
+
             <el-form-item label="确认密码" prop="confirmPassword">
-              <el-input v-model="form.confirmPassword" type="password" show-password placeholder="请再次输入密码" />
+              <el-input
+                v-model="form.confirmPassword"
+                type="password"
+                show-password
+                placeholder="请再次输入密码"
+              />
+            </el-form-item>
+            <el-form-item label="志愿者姓名" prop="realName">
+              <el-input v-model.trim="form.realName" placeholder="请输入真实姓名" />
             </el-form-item>
 
-            <el-form-item class="span-2" label="头像（可选）">
-              <div class="avatar-uploader">
-                <img class="avatar-preview" :src="avatarPreview" alt="头像预览" />
+            <el-form-item class="span-2" label="头像" prop="avatar">
+              <div class="avatar-panel">
+                <el-upload
+                  class="avatar-upload"
+                  :show-file-list="false"
+                  :http-request="handleAvatarUpload"
+                  :before-upload="beforeAvatarUpload"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                >
+                  <div class="upload-box">
+                    <img v-if="form.avatar" class="avatar-preview" :src="form.avatar" alt="头像预览" />
+                    <template v-else>
+                      <span class="plus">+</span>
+                      <span class="upload-text">点击上传头像</span>
+                    </template>
+                  </div>
+                </el-upload>
                 <div class="avatar-actions">
-                  <el-upload
-                    class="upload-btn"
-                    :show-file-list="false"
-                    :http-request="handleAvatarUpload"
-                    :before-upload="beforeAvatarUpload"
-                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                  >
-                    <el-button :loading="avatarUploading">上传头像</el-button>
-                  </el-upload>
-                  <el-button text @click="form.avatar = ''">清空头像</el-button>
+                  <el-button size="small" :loading="avatarUploading" @click="triggerUpload">选择图片</el-button>
+                  <el-button size="small" text @click="clearAvatar">清空头像</el-button>
                   <span class="tip">支持 JPG/PNG/WEBP/GIF，大小不超过 5MB</span>
                 </div>
               </div>
+            </el-form-item>
+
+            <el-form-item label="联系电话" prop="phone">
+              <el-input v-model.trim="form.phone" placeholder="请输入手机号" />
+            </el-form-item>
+            <el-form-item label="邮箱" prop="email">
+              <el-input v-model.trim="form.email" placeholder="请输入邮箱地址" />
+            </el-form-item>
+
+            <el-form-item label="性别" prop="gender">
+              <el-select v-model="form.gender" placeholder="请选择性别">
+                <el-option label="男" value="MALE" />
+                <el-option label="女" value="FEMALE" />
+                <el-option label="保密" value="UNKNOWN" />
+              </el-select>
             </el-form-item>
           </div>
         </el-form>
@@ -80,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import type { FormInstance, FormRules, UploadProps, UploadRequestOptions } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -90,6 +105,7 @@ import { isPhone, isStrongPassword } from '@/utils/validate'
 
 interface RegisterForm {
   username: string
+  realName: string
   password: string
   confirmPassword: string
   email: string
@@ -98,8 +114,6 @@ interface RegisterForm {
   avatar: string
 }
 
-const defaultAvatar = 'https://cdn.jsdelivr.net/gh/fukexin123/assets/default-avatar.png'
-
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
@@ -107,6 +121,7 @@ const avatarUploading = ref(false)
 
 const form = reactive<RegisterForm>({
   username: '',
+  realName: '',
   password: '',
   confirmPassword: '',
   email: '',
@@ -115,13 +130,12 @@ const form = reactive<RegisterForm>({
   avatar: ''
 })
 
-const avatarPreview = computed(() => form.avatar || defaultAvatar)
-
 const rules: FormRules<RegisterForm> = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入志愿者账号', trigger: 'blur' }],
+  realName: [{ required: true, message: '请输入志愿者姓名', trigger: 'blur' }],
   email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }],
   phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
     {
       validator: (_rule, value: string, callback) => {
         if (!isPhone(value)) callback(new Error('手机号格式不正确'))
@@ -166,6 +180,15 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
   return true
 }
 
+function triggerUpload() {
+  const trigger = document.querySelector('.avatar-upload input[type=file]') as HTMLInputElement | null
+  trigger?.click()
+}
+
+function clearAvatar() {
+  form.avatar = ''
+}
+
 async function handleAvatarUpload(option: UploadRequestOptions) {
   avatarUploading.value = true
   try {
@@ -188,6 +211,7 @@ async function submitRegister() {
   try {
     await registerApi({
       username: form.username,
+      realName: form.realName,
       password: form.password,
       confirmPassword: form.confirmPassword,
       email: form.email,
@@ -207,7 +231,7 @@ async function submitRegister() {
 .register-scene {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
+  grid-template-columns: 1fr 1.15fr;
   background:
     radial-gradient(circle at 14% 12%, rgba(24, 113, 79, 0.22), transparent 40%),
     radial-gradient(circle at 88% 85%, rgba(225, 170, 63, 0.2), transparent 36%),
@@ -215,7 +239,7 @@ async function submitRegister() {
 }
 
 .register-hero {
-  padding: 72px 64px;
+  padding: 68px 64px;
 }
 
 .hero-tag {
@@ -231,13 +255,13 @@ async function submitRegister() {
 
 .register-hero h1 {
   margin: 0;
-  line-height: 1.25;
-  font-size: clamp(28px, 4vw, 46px);
+  line-height: 1.3;
+  font-size: clamp(30px, 4vw, 44px);
   color: #173a2c;
 }
 
 .hero-list {
-  margin: 22px 0 0;
+  margin: 24px 0 0;
   padding-left: 20px;
   color: #405750;
   line-height: 1.9;
@@ -251,16 +275,16 @@ async function submitRegister() {
 }
 
 .register-card {
-  width: min(640px, 100%);
+  width: min(700px, 100%);
   border-radius: 18px;
   border: 1px solid var(--cvs-border);
   box-shadow: 0 18px 40px rgba(28, 54, 44, 0.1);
-  background: rgba(255, 255, 255, 0.93);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .card-head h2 {
   margin: 0;
-  font-size: 30px;
+  font-size: 28px;
 }
 
 .card-head p {
@@ -269,7 +293,7 @@ async function submitRegister() {
 }
 
 .register-form {
-  margin-top: 18px;
+  margin-top: 16px;
 }
 
 .form-grid {
@@ -282,19 +306,41 @@ async function submitRegister() {
   grid-column: span 2;
 }
 
-.avatar-uploader {
-  display: grid;
-  grid-template-columns: 82px 1fr;
-  gap: 12px;
+.avatar-panel {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 12px;
+}
+
+.upload-box {
+  width: 168px;
+  height: 86px;
+  border-radius: 24px;
+  border: 1px dashed #cfdad2;
+  background: #f4f6f5;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.plus {
+  font-size: 44px;
+  line-height: 1;
+  color: #6a706d;
+}
+
+.upload-text {
+  margin-top: -4px;
+  font-size: 13px;
+  color: #6a706d;
 }
 
 .avatar-preview {
-  width: 82px;
-  height: 82px;
-  border-radius: 16px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 1px solid var(--cvs-border);
 }
 
 .avatar-actions {
@@ -310,7 +356,7 @@ async function submitRegister() {
 }
 
 .action-row {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -337,10 +383,6 @@ async function submitRegister() {
 
   .span-2 {
     grid-column: span 1;
-  }
-
-  .avatar-uploader {
-    grid-template-columns: 1fr;
   }
 }
 </style>

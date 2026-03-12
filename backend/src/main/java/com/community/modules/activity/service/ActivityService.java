@@ -2,12 +2,12 @@ package com.community.modules.activity.service;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.community.common.exception.BusinessException;
 import com.community.common.util.SecurityUtil;
 import com.community.common.web.PageResult;
 import com.community.modules.activity.dto.ActivityCategoryRequest;
 import com.community.modules.activity.dto.ActivityRequest;
+import com.community.modules.activity.dto.ActivityApplicationView;
 import com.community.modules.activity.dto.ApplicationAuditRequest;
 import com.community.modules.activity.dto.CheckRecordView;
 import com.community.modules.activity.dto.SignRequest;
@@ -23,6 +23,8 @@ import com.community.modules.content.entity.FavoriteActivity;
 import com.community.modules.content.mapper.FavoriteActivityMapper;
 import com.community.modules.user.entity.User;
 import com.community.modules.user.mapper.UserMapper;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,8 +40,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class ActivityService {
-
-    private static final double MAX_DISTANCE_METERS = 500.0;
 
     private final ActivityCategoryMapper categoryMapper;
     private final ActivityMapper activityMapper;
@@ -96,14 +96,15 @@ public class ActivityService {
     }
 
     public PageResult<Activity> pageActivities(long current, long size, String keyword, Long categoryId, String status) {
-        Page<Activity> page = new Page<>(current, size);
         LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(keyword), Activity::getTitle, keyword)
                 .eq(categoryId != null, Activity::getCategoryId, categoryId)
                 .eq(StringUtils.hasText(status), Activity::getStatus, status)
                 .orderByDesc(Activity::getCreateTime);
-        Page<Activity> result = activityMapper.selectPage(page, wrapper);
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+        PageHelper.startPage((int) current, (int) size);
+        List<Activity> records = activityMapper.selectList(wrapper);
+        PageInfo<Activity> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -116,10 +117,10 @@ public class ActivityService {
         activity.setEndTime(request.getEndTime());
         activity.setAddress(request.getAddress());
         activity.setTargetCount(request.getTargetCount());
+        activity.setVolunteerQuota(request.getVolunteerQuota());
+        activity.setContent(request.getContent());
         activity.setDescription(request.getDescription());
         activity.setCoverImage(request.getCoverImage());
-        activity.setLatitude(request.getLatitude());
-        activity.setLongitude(request.getLongitude());
         activity.setStatus(StrUtil.blankToDefault(request.getStatus(), "PUBLISHED"));
         activity.setCreatorId(SecurityUtil.currentUserId());
         activityMapper.insert(activity);
@@ -138,10 +139,10 @@ public class ActivityService {
         activity.setEndTime(request.getEndTime());
         activity.setAddress(request.getAddress());
         activity.setTargetCount(request.getTargetCount());
+        activity.setVolunteerQuota(request.getVolunteerQuota());
+        activity.setContent(request.getContent());
         activity.setDescription(request.getDescription());
         activity.setCoverImage(request.getCoverImage());
-        activity.setLatitude(request.getLatitude());
-        activity.setLongitude(request.getLongitude());
         activity.setStatus(StrUtil.blankToDefault(request.getStatus(), activity.getStatus()));
         activityMapper.updateById(activity);
     }
@@ -205,6 +206,14 @@ public class ActivityService {
             throw new BusinessException("你已报名该活动，请勿重复提交");
         }
 
+        if (activity.getVolunteerQuota() != null && activity.getVolunteerQuota() > 0) {
+            Long appliedCount = applicationMapper.selectCount(new LambdaQueryWrapper<ActivityApplication>()
+                    .eq(ActivityApplication::getActivityId, activityId));
+            if (appliedCount != null && appliedCount >= activity.getVolunteerQuota()) {
+                throw new BusinessException("该活动报名人数已满");
+            }
+        }
+
         ActivityApplication application = new ActivityApplication();
         application.setActivityId(activityId);
         application.setUserId(userId);
@@ -213,16 +222,60 @@ public class ActivityService {
         applicationMapper.insert(application);
     }
 
-    public PageResult<ActivityApplication> pageApplications(long current, long size, Long activityId, String status, boolean onlyMine) {
-        Page<ActivityApplication> page = new Page<>(current, size);
+    public PageResult<ActivityApplicationView> pageApplications(long current, long size, Long activityId, String status, boolean onlyMine) {
         Long currentUserId = SecurityUtil.currentUserId();
         LambdaQueryWrapper<ActivityApplication> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(activityId != null, ActivityApplication::getActivityId, activityId)
                 .eq(StringUtils.hasText(status), ActivityApplication::getStatus, status)
                 .eq(onlyMine && currentUserId != null, ActivityApplication::getUserId, currentUserId)
                 .orderByDesc(ActivityApplication::getApplyTime);
-        Page<ActivityApplication> result = applicationMapper.selectPage(page, wrapper);
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+        PageHelper.startPage((int) current, (int) size);
+        List<ActivityApplication> records = applicationMapper.selectList(wrapper);
+        PageInfo<ActivityApplication> pageInfo = new PageInfo<>(records);
+
+        List<Long> activityIds = records.stream()
+                .map(ActivityApplication::getActivityId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, Activity> activityMap = new HashMap<>();
+        if (!activityIds.isEmpty()) {
+            activityMapper.selectBatchIds(activityIds).forEach(item -> activityMap.put(item.getId(), item));
+        }
+
+        List<Long> userIds = records.stream()
+                .map(ActivityApplication::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            userMapper.selectBatchIds(userIds).forEach(item -> userMap.put(item.getId(), item));
+        }
+
+        List<ActivityApplicationView> views = records.stream().map(record -> {
+            ActivityApplicationView view = new ActivityApplicationView();
+            view.setId(record.getId());
+            view.setActivityId(record.getActivityId());
+            view.setUserId(record.getUserId());
+            view.setStatus(record.getStatus());
+            view.setRejectReason(record.getRejectReason());
+            view.setApplyTime(record.getApplyTime());
+            view.setAuditTime(record.getAuditTime());
+            view.setAuditorId(record.getAuditorId());
+            Activity activity = activityMap.get(record.getActivityId());
+            if (activity != null) {
+                view.setActivityTitle(activity.getTitle());
+            }
+            User user = userMap.get(record.getUserId());
+            if (user != null) {
+                view.setUsername(user.getUsername());
+                view.setRealName(user.getRealName());
+            }
+            return view;
+        }).toList();
+
+        return new PageResult<>(pageInfo.getTotal(), current, size, views);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -267,11 +320,6 @@ public class ActivityService {
         if (now.isBefore(signInStart) || now.isAfter(activity.getStartTime())) {
             throw new BusinessException("仅支持在活动开始前 15 分钟至开始时段内签到");
         }
-        double distance = calcDistanceMeters(activity.getLatitude(), activity.getLongitude(),
-                request.getLatitude(), request.getLongitude());
-        if (distance > MAX_DISTANCE_METERS) {
-            throw new BusinessException("当前位置距离活动地点过远，签到失败");
-        }
 
         ActivityCheckRecord record = checkRecordMapper.selectOne(new LambdaQueryWrapper<ActivityCheckRecord>()
                 .eq(ActivityCheckRecord::getActivityId, activity.getId())
@@ -286,11 +334,9 @@ public class ActivityService {
             record.setUserId(currentUserId);
             record.setStatus("SIGNED_IN");
             record.setSignInTime(now);
-            record.setSignInDistance(distance);
             checkRecordMapper.insert(record);
         } else {
             record.setSignInTime(now);
-            record.setSignInDistance(distance);
             record.setStatus("SIGNED_IN");
             checkRecordMapper.updateById(record);
         }
@@ -314,11 +360,6 @@ public class ActivityService {
         if (now.isBefore(activity.getEndTime().minusMinutes(15))) {
             throw new BusinessException("仅支持在活动结束前 15 分钟内签退");
         }
-        double distance = calcDistanceMeters(activity.getLatitude(), activity.getLongitude(),
-                request.getLatitude(), request.getLongitude());
-        if (distance > MAX_DISTANCE_METERS) {
-            throw new BusinessException("当前位置距离活动地点过远，签退失败");
-        }
 
         ActivityCheckRecord record = checkRecordMapper.selectOne(new LambdaQueryWrapper<ActivityCheckRecord>()
                 .eq(ActivityCheckRecord::getActivityId, activity.getId())
@@ -331,19 +372,17 @@ public class ActivityService {
             throw new BusinessException("你已完成签退，请勿重复操作");
         }
         record.setSignOutTime(now);
-        record.setSignOutDistance(distance);
         record.setStatus("FINISHED");
         checkRecordMapper.updateById(record);
     }
 
     public PageResult<CheckRecordView> myCheckRecords(long current, long size) {
         Long userId = SecurityUtil.currentUserId();
-        Page<ActivityCheckRecord> page = new Page<>(current, size);
-        Page<ActivityCheckRecord> result = checkRecordMapper.selectPage(page, new LambdaQueryWrapper<ActivityCheckRecord>()
+        PageHelper.startPage((int) current, (int) size);
+        List<ActivityCheckRecord> records = checkRecordMapper.selectList(new LambdaQueryWrapper<ActivityCheckRecord>()
                 .eq(ActivityCheckRecord::getUserId, userId)
                 .orderByDesc(ActivityCheckRecord::getCreateTime));
-
-        List<ActivityCheckRecord> records = result.getRecords();
+        PageInfo<ActivityCheckRecord> pageInfo = new PageInfo<>(records);
         List<Long> activityIds = records.stream()
                 .map(ActivityCheckRecord::getActivityId)
                 .filter(Objects::nonNull)
@@ -375,7 +414,7 @@ public class ActivityService {
             return view;
         }).toList();
 
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), views);
+        return new PageResult<>(pageInfo.getTotal(), current, size, views);
     }
 
     public int endExpiredActivities() {
@@ -405,17 +444,4 @@ public class ActivityService {
         return ChronoUnit.MINUTES.between(signInTime, signOutTime);
     }
 
-    private double calcDistanceMeters(Double lat1, Double lon1, Double lat2, Double lon2) {
-        if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
-            return Double.MAX_VALUE;
-        }
-        final double radius = 6371000.0;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return radius * c;
-    }
 }

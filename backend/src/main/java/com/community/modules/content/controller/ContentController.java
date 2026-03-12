@@ -265,8 +265,9 @@ public class ContentController {
     public ApiResponse<PageResult<CommentInfo>> pageComments(@RequestParam(defaultValue = "1") long current,
                                                              @RequestParam(defaultValue = "10") long size,
                                                              @RequestParam(defaultValue = "false") boolean onlyMine,
-                                                             @RequestParam(required = false) String targetType) {
-        return ApiResponse.success(contentService.pageComments(current, size, onlyMine, targetType));
+                                                             @RequestParam(required = false) String targetType,
+                                                             @RequestParam(required = false) Long targetId) {
+        return ApiResponse.success(contentService.pageComments(current, size, onlyMine, targetType, targetId));
     }
 
     @Operation(summary = "Admin - delete comment")

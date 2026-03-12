@@ -3,7 +3,8 @@
     <el-card class="module" shadow="never">
       <el-table :data="list" border>
         <el-table-column prop="id" label="申请ID" width="90" />
-        <el-table-column prop="activityId" label="活动ID" width="90" />
+        <el-table-column prop="activityTitle" label="活动名称" min-width="180" />
+        <el-table-column prop="realName" label="志愿者姓名" width="120" />
         <el-table-column prop="status" label="审核状态" width="120">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
@@ -68,35 +69,14 @@ function statusTag(status: string) {
   return 'info'
 }
 
-async function getLocation() {
-  return new Promise<{ latitude: number; longitude: number }>((resolve) => {
-    if (!navigator.geolocation) {
-      resolve({ latitude: 31.2304, longitude: 121.4737 })
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        })
-      },
-      () => resolve({ latitude: 31.2304, longitude: 121.4737 }),
-      { enableHighAccuracy: true, timeout: 5000 }
-    )
-  })
-}
-
 async function signIn(applicationId: number) {
-  const loc = await getLocation()
-  await signInApi({ applicationId, ...loc })
+  await signInApi({ applicationId })
   ElMessage.success('签到成功')
   await load()
 }
 
 async function signOut(applicationId: number) {
-  const loc = await getLocation()
-  await signOutApi({ applicationId, ...loc })
+  await signOutApi({ applicationId })
   ElMessage.success('签退成功')
   await load()
 }

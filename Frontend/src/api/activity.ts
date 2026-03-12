@@ -18,20 +18,24 @@ export interface ActivityModel {
   address: string
   status: string
   targetCount: number
+  volunteerQuota: number
+  content: string
   description: string
   coverImage?: string
-  latitude?: number
-  longitude?: number
   createTime?: string
 }
 
 export interface ApplicationModel {
   id: number
   activityId: number
+  activityTitle?: string
   userId: number
+  username?: string
+  realName?: string
   status: string
   rejectReason?: string
   applyTime: string
+  auditTime?: string
 }
 
 export interface CheckRecordModel {
@@ -79,6 +83,10 @@ export function pageActivitiesApi(params: {
   return request.get<never, PageResult<ActivityModel>>('/api/activity/page', { params })
 }
 
+export function activityDetailApi(id: number) {
+  return request.get<never, ActivityModel>(`/api/activity/${id}`)
+}
+
 export function createActivityApi(payload: Partial<ActivityModel>) {
   return request.post('/api/activity', payload)
 }
@@ -111,11 +119,11 @@ export function auditApplicationApi(id: number, payload: { status: string; rejec
   return request.put(`/api/activity/applications/${id}/audit`, payload)
 }
 
-export function signInApi(payload: { applicationId: number; latitude: number; longitude: number }) {
+export function signInApi(payload: { applicationId: number }) {
   return request.post('/api/activity/sign/in', payload)
 }
 
-export function signOutApi(payload: { applicationId: number; latitude: number; longitude: number }) {
+export function signOutApi(payload: { applicationId: number }) {
   return request.post('/api/activity/sign/out', payload)
 }
 

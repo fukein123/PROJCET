@@ -4,12 +4,12 @@ import com.community.common.dto.IdListRequest;
 import com.community.common.web.ApiResponse;
 import com.community.common.web.PageResult;
 import com.community.modules.activity.dto.ActivityCategoryRequest;
+import com.community.modules.activity.dto.ActivityApplicationView;
 import com.community.modules.activity.dto.ActivityRequest;
 import com.community.modules.activity.dto.ApplicationAuditRequest;
 import com.community.modules.activity.dto.CheckRecordView;
 import com.community.modules.activity.dto.SignRequest;
 import com.community.modules.activity.entity.Activity;
-import com.community.modules.activity.entity.ActivityApplication;
 import com.community.modules.activity.entity.ActivityCategory;
 import com.community.modules.activity.service.ActivityService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -132,20 +132,20 @@ public class ActivityController {
     @Operation(summary = "Admin - page all applications")
     @GetMapping("/applications/page")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<PageResult<ActivityApplication>> pageApplications(@RequestParam(defaultValue = "1") long current,
-                                                                         @RequestParam(defaultValue = "10") long size,
-                                                                         @RequestParam(required = false) Long activityId,
-                                                                         @RequestParam(required = false) String status) {
+    public ApiResponse<PageResult<ActivityApplicationView>> pageApplications(@RequestParam(defaultValue = "1") long current,
+                                                                             @RequestParam(defaultValue = "10") long size,
+                                                                             @RequestParam(required = false) Long activityId,
+                                                                             @RequestParam(required = false) String status) {
         return ApiResponse.success(activityService.pageApplications(current, size, activityId, status, false));
     }
 
     @Operation(summary = "Volunteer - my applications")
     @GetMapping("/applications/my")
     @PreAuthorize("hasRole('VOLUNTEER')")
-    public ApiResponse<PageResult<ActivityApplication>> myApplications(@RequestParam(defaultValue = "1") long current,
-                                                                       @RequestParam(defaultValue = "10") long size,
-                                                                       @RequestParam(required = false) Long activityId,
-                                                                       @RequestParam(required = false) String status) {
+    public ApiResponse<PageResult<ActivityApplicationView>> myApplications(@RequestParam(defaultValue = "1") long current,
+                                                                           @RequestParam(defaultValue = "10") long size,
+                                                                           @RequestParam(required = false) Long activityId,
+                                                                           @RequestParam(required = false) String status) {
         return ApiResponse.success(activityService.pageApplications(current, size, activityId, status, true));
     }
 
