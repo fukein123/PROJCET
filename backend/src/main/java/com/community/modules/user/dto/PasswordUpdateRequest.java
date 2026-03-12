@@ -5,10 +5,9 @@ import lombok.Data;
 
 @Data
 public class PasswordUpdateRequest {
-    @NotBlank(message = "Old password is required")
+    @NotBlank(message = "请输入原密码")
     private String oldPassword;
 
-    @NotBlank(message = "New password is required")
+    @NotBlank(message = "请输入新密码")
     private String newPassword;
 }
-

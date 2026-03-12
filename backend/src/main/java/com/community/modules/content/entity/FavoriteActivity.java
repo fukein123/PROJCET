@@ -15,5 +15,7 @@ public class FavoriteActivity extends BaseEntity {
     private Long id;
     private Long userId;
     private Long activityId;
+    private String note;
+    private String tag;
+    private Integer priority;
 }
-

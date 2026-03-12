@@ -5,10 +5,9 @@ import lombok.Data;
 
 @Data
 public class ActivityCategoryRequest {
-    @NotBlank(message = "Category name is required")
+    @NotBlank(message = "请输入分类名称")
     private String name;
     private String description;
     private Integer sort;
     private Integer status;
 }
-

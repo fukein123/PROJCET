@@ -10,28 +10,28 @@ import java.time.LocalDateTime;
 
 @Data
 public class ActivityRequest {
-    @NotBlank(message = "Title is required")
+    @NotBlank(message = "请输入活动标题")
     private String title;
 
-    @NotNull(message = "Category is required")
+    @NotNull(message = "请选择活动分类")
     private Long categoryId;
 
-    @NotNull(message = "Start time is required")
+    @NotNull(message = "请选择开始时间")
     private LocalDateTime startTime;
 
-    @NotNull(message = "End time is required")
-    @Future(message = "End time must be in the future")
+    @NotNull(message = "请选择结束时间")
+    @Future(message = "结束时间必须晚于当前时间")
     private LocalDateTime endTime;
 
-    @NotBlank(message = "Address is required")
+    @NotBlank(message = "请输入活动地址")
     private String address;
 
-    @Min(value = 1, message = "Target count must be >= 1")
+    @Min(value = 1, message = "目标人数不能小于 1")
     private Integer targetCount;
 
     private String description;
+    private String coverImage;
     private String status;
     private Double latitude;
     private Double longitude;
 }
-

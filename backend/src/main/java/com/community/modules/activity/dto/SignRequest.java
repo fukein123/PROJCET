@@ -5,11 +5,10 @@ import lombok.Data;
 
 @Data
 public class SignRequest {
-    @NotNull(message = "Application id is required")
+    @NotNull(message = "申请编号不能为空")
     private Long applicationId;
-    @NotNull(message = "Latitude is required")
+    @NotNull(message = "纬度不能为空")
     private Double latitude;
-    @NotNull(message = "Longitude is required")
+    @NotNull(message = "经度不能为空")
     private Double longitude;
 }
-

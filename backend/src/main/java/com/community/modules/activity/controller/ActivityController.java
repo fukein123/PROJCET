@@ -1,21 +1,30 @@
 package com.community.modules.activity.controller;
 
+import com.community.common.dto.IdListRequest;
 import com.community.common.web.ApiResponse;
 import com.community.common.web.PageResult;
 import com.community.modules.activity.dto.ActivityCategoryRequest;
 import com.community.modules.activity.dto.ActivityRequest;
 import com.community.modules.activity.dto.ApplicationAuditRequest;
+import com.community.modules.activity.dto.CheckRecordView;
 import com.community.modules.activity.dto.SignRequest;
 import com.community.modules.activity.entity.Activity;
 import com.community.modules.activity.entity.ActivityApplication;
 import com.community.modules.activity.entity.ActivityCategory;
-import com.community.modules.activity.entity.ActivityCheckRecord;
 import com.community.modules.activity.service.ActivityService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -48,6 +57,22 @@ public class ActivityController {
         return ApiResponse.success("updated", null);
     }
 
+    @Operation(summary = "Admin - delete category")
+    @DeleteMapping("/categories/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteCategory(@PathVariable Long id) {
+        activityService.deleteCategory(id);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch delete categories")
+    @PostMapping("/categories/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDeleteCategories(@Valid @RequestBody IdListRequest request) {
+        activityService.batchDeleteCategories(request.getIds());
+        return ApiResponse.success("batch deleted", null);
+    }
+
     @Operation(summary = "Page activities")
     @GetMapping("/page")
     public ApiResponse<PageResult<Activity>> page(@RequestParam(defaultValue = "1") long current,
@@ -78,6 +103,22 @@ public class ActivityController {
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody ActivityRequest request) {
         activityService.updateActivity(id, request);
         return ApiResponse.success("updated", null);
+    }
+
+    @Operation(summary = "Admin - delete activity")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        activityService.deleteActivity(id);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch delete activities")
+    @PostMapping("/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDelete(@Valid @RequestBody IdListRequest request) {
+        activityService.batchDeleteActivities(request.getIds());
+        return ApiResponse.success("batch deleted", null);
     }
 
     @Operation(summary = "Volunteer - apply for activity")
@@ -135,9 +176,8 @@ public class ActivityController {
     @Operation(summary = "Volunteer - my sign records")
     @GetMapping("/sign/my-records")
     @PreAuthorize("hasRole('VOLUNTEER')")
-    public ApiResponse<PageResult<ActivityCheckRecord>> myRecords(@RequestParam(defaultValue = "1") long current,
-                                                                  @RequestParam(defaultValue = "10") long size) {
+    public ApiResponse<PageResult<CheckRecordView>> myRecords(@RequestParam(defaultValue = "1") long current,
+                                                               @RequestParam(defaultValue = "10") long size) {
         return ApiResponse.success(activityService.myCheckRecords(current, size));
     }
 }
-

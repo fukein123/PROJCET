@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -38,17 +39,30 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/common/upload",
+                                "/uploads/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/content/home",
+                                "/api/content/dynamics/page",
+                                "/api/content/notices/page",
+                                "/api/content/forum/posts/page",
+                                "/api/content/forum/categories",
+                                "/api/content/comments/page",
+                                "/api/activity/page",
+                                "/api/activity/categories"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) ->
-                                writeJson(response, 401, ApiResponse.fail(401, "Unauthenticated")))
+                                writeJson(response, 401, ApiResponse.fail(401, "未登录或登录已失效")))
                         .accessDeniedHandler((request, response, accessDeniedException) ->
-                                writeJson(response, 403, ApiResponse.fail(403, "Forbidden"))))
+                                writeJson(response, 403, ApiResponse.fail(403, "无权限访问该资源"))))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -79,4 +93,3 @@ public class SecurityConfig {
         response.getWriter().write(objectMapper.writeValueAsString(payload));
     }
 }
-

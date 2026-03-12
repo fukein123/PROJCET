@@ -18,7 +18,7 @@ public class DashboardService {
         Map<String, Object> result = new HashMap<>();
         result.put("activityCount", queryCount("select count(1) from activity"));
         result.put("postCount", queryCount("select count(1) from forum_post"));
-        result.put("orderCount", queryCount("select count(1) from exchange_order"));
+        result.put("commentCount", queryCount("select count(1) from comment_info where status=1"));
         result.put("volunteerCount", queryCount("select count(1) from sys_user where role='VOLUNTEER'"));
         result.put("weeklyApplicationTrend", weeklyApplicationTrend());
         result.put("activityTypeBar", activityTypeDistribution());
@@ -61,4 +61,3 @@ public class DashboardService {
                 """);
     }
 }
-

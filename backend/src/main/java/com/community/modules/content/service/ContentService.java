@@ -5,8 +5,24 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.community.common.exception.BusinessException;
 import com.community.common.util.SecurityUtil;
 import com.community.common.web.PageResult;
-import com.community.modules.content.entity.*;
-import com.community.modules.content.mapper.*;
+import com.community.modules.activity.entity.Activity;
+import com.community.modules.activity.mapper.ActivityMapper;
+import com.community.modules.content.dto.FavoriteRequest;
+import com.community.modules.content.dto.FavoriteUpdateRequest;
+import com.community.modules.content.entity.BannerInfo;
+import com.community.modules.content.entity.CommentInfo;
+import com.community.modules.content.entity.FavoriteActivity;
+import com.community.modules.content.entity.ForumCategory;
+import com.community.modules.content.entity.ForumPost;
+import com.community.modules.content.entity.InfoDynamic;
+import com.community.modules.content.entity.NoticeInfo;
+import com.community.modules.content.mapper.BannerInfoMapper;
+import com.community.modules.content.mapper.CommentInfoMapper;
+import com.community.modules.content.mapper.FavoriteActivityMapper;
+import com.community.modules.content.mapper.ForumCategoryMapper;
+import com.community.modules.content.mapper.ForumPostMapper;
+import com.community.modules.content.mapper.InfoDynamicMapper;
+import com.community.modules.content.mapper.NoticeInfoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +30,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -25,14 +42,15 @@ public class ContentService {
     private final ForumCategoryMapper forumCategoryMapper;
     private final ForumPostMapper forumPostMapper;
     private final CommentInfoMapper commentInfoMapper;
-    private final ExchangeOrderMapper exchangeOrderMapper;
     private final FavoriteActivityMapper favoriteActivityMapper;
+    private final ActivityMapper activityMapper;
 
     public PageResult<InfoDynamic> pageDynamics(long current, long size, String type, String keyword, boolean onlyPublished) {
         Page<InfoDynamic> page = new Page<>(current, size);
         LambdaQueryWrapper<InfoDynamic> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StringUtils.hasText(type), InfoDynamic::getType, type)
-                .like(StringUtils.hasText(keyword), InfoDynamic::getTitle, keyword)
+                .and(StringUtils.hasText(keyword), q -> q.like(InfoDynamic::getTitle, keyword)
+                        .or().like(InfoDynamic::getContent, keyword))
                 .eq(onlyPublished, InfoDynamic::getStatus, 1)
                 .orderByDesc(InfoDynamic::getPublishTime);
         Page<InfoDynamic> result = infoDynamicMapper.selectPage(page, wrapper);
@@ -52,14 +70,28 @@ public class ContentService {
     public void updateDynamic(Long id, InfoDynamic dynamic) {
         InfoDynamic db = infoDynamicMapper.selectById(id);
         if (db == null) {
-            throw new BusinessException(404, "Dynamic not found");
+            throw new BusinessException(404, "资讯动态不存在");
         }
         db.setTitle(dynamic.getTitle());
         db.setContent(dynamic.getContent());
+        db.setImageUrl(dynamic.getImageUrl());
         db.setType(dynamic.getType());
         db.setStatus(dynamic.getStatus());
         db.setPublishTime(dynamic.getPublishTime() == null ? db.getPublishTime() : dynamic.getPublishTime());
         infoDynamicMapper.updateById(db);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteDynamic(Long id) {
+        infoDynamicMapper.deleteById(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDeleteDynamics(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        infoDynamicMapper.deleteByIds(ids);
     }
 
     public List<InfoDynamic> hotDynamicsTop5() {
@@ -89,13 +121,26 @@ public class ContentService {
     public void updateNotice(Long id, NoticeInfo notice) {
         NoticeInfo db = noticeInfoMapper.selectById(id);
         if (db == null) {
-            throw new BusinessException(404, "Notice not found");
+            throw new BusinessException(404, "公告不存在");
         }
         db.setTitle(notice.getTitle());
         db.setContent(notice.getContent());
         db.setStatus(notice.getStatus());
         db.setPublishTime(notice.getPublishTime() == null ? db.getPublishTime() : notice.getPublishTime());
         noticeInfoMapper.updateById(db);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteNotice(Long id) {
+        noticeInfoMapper.deleteById(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDeleteNotices(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        noticeInfoMapper.deleteByIds(ids);
     }
 
     public List<BannerInfo> listBanners() {
@@ -116,7 +161,7 @@ public class ContentService {
     public void updateBanner(Long id, BannerInfo banner) {
         BannerInfo db = bannerInfoMapper.selectById(id);
         if (db == null) {
-            throw new BusinessException(404, "Banner not found");
+            throw new BusinessException(404, "轮播图不存在");
         }
         db.setTitle(banner.getTitle());
         db.setImageUrl(banner.getImageUrl());
@@ -124,6 +169,19 @@ public class ContentService {
         db.setSort(banner.getSort());
         db.setStatus(banner.getStatus());
         bannerInfoMapper.updateById(db);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteBanner(Long id) {
+        bannerInfoMapper.deleteById(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDeleteBanners(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        bannerInfoMapper.deleteByIds(ids);
     }
 
     public List<ForumCategory> listForumCategories() {
@@ -144,12 +202,34 @@ public class ContentService {
     public void updateForumCategory(Long id, ForumCategory category) {
         ForumCategory db = forumCategoryMapper.selectById(id);
         if (db == null) {
-            throw new BusinessException(404, "Forum category not found");
+            throw new BusinessException(404, "论坛分类不存在");
         }
         db.setName(category.getName());
         db.setSort(category.getSort());
         db.setStatus(category.getStatus());
         forumCategoryMapper.updateById(db);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteForumCategory(Long id) {
+        List<ForumPost> posts = forumPostMapper.selectList(new LambdaQueryWrapper<ForumPost>()
+                .eq(ForumPost::getCategoryId, id));
+        List<Long> postIds = posts.stream().map(ForumPost::getId).filter(Objects::nonNull).toList();
+        if (!postIds.isEmpty()) {
+            commentInfoMapper.delete(new LambdaQueryWrapper<CommentInfo>()
+                    .eq(CommentInfo::getTargetType, "POST")
+                    .in(CommentInfo::getTargetId, postIds));
+            forumPostMapper.deleteByIds(postIds);
+        }
+        forumCategoryMapper.deleteById(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDeleteForumCategories(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        ids.stream().filter(Objects::nonNull).forEach(this::deleteForumCategory);
     }
 
     public PageResult<ForumPost> pageForumPosts(long current, long size, String keyword, String status, boolean onlyMine, boolean onlyApproved) {
@@ -189,10 +269,10 @@ public class ContentService {
         }
         ForumPost db = forumPostMapper.selectById(post.getId());
         if (db == null) {
-            throw new BusinessException(404, "Post not found");
+            throw new BusinessException(404, "帖子不存在");
         }
         if (!db.getUserId().equals(userId)) {
-            throw new BusinessException(403, "Cannot edit others' posts");
+            throw new BusinessException(403, "不能编辑他人的帖子");
         }
         db.setTitle(post.getTitle());
         db.setContent(post.getContent());
@@ -206,14 +286,30 @@ public class ContentService {
     public void auditPost(Long id, String status, String reason) {
         ForumPost post = forumPostMapper.selectById(id);
         if (post == null) {
-            throw new BusinessException(404, "Post not found");
+            throw new BusinessException(404, "帖子不存在");
         }
         if (!"APPROVED".equalsIgnoreCase(status) && !"REJECTED".equalsIgnoreCase(status)) {
-            throw new BusinessException("Status must be APPROVED or REJECTED");
+            throw new BusinessException("审核状态只能是 APPROVED 或 REJECTED");
         }
         post.setStatus(status.toUpperCase());
         post.setAuditReason(reason);
         forumPostMapper.updateById(post);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteForumPost(Long id) {
+        forumPostMapper.deleteById(id);
+        commentInfoMapper.delete(new LambdaQueryWrapper<CommentInfo>()
+                .eq(CommentInfo::getTargetType, "POST")
+                .eq(CommentInfo::getTargetId, id));
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDeleteForumPosts(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        ids.stream().filter(Objects::nonNull).forEach(this::deleteForumPost);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -229,56 +325,104 @@ public class ContentService {
         LambdaQueryWrapper<CommentInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(onlyMine && userId != null, CommentInfo::getUserId, userId)
                 .eq(StringUtils.hasText(targetType), CommentInfo::getTargetType, targetType)
+                .eq(CommentInfo::getStatus, 1)
+                .notLike(CommentInfo::getContent, "自动化冒烟评论")
                 .orderByDesc(CommentInfo::getCreateTime);
         Page<CommentInfo> result = commentInfoMapper.selectPage(page, wrapper);
         return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
     }
 
-    public PageResult<ExchangeOrder> pageOrders(long current, long size, boolean onlyMine) {
-        Page<ExchangeOrder> page = new Page<>(current, size);
-        Long userId = SecurityUtil.currentUserId();
-        LambdaQueryWrapper<ExchangeOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(onlyMine && userId != null, ExchangeOrder::getUserId, userId)
-                .orderByDesc(ExchangeOrder::getCreateTime);
-        Page<ExchangeOrder> result = exchangeOrderMapper.selectPage(page, wrapper);
-        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteComment(Long id) {
+        commentInfoMapper.deleteById(id);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void saveOrder(ExchangeOrder order) {
-        Long currentUserId = SecurityUtil.currentUserId();
-        if (currentUserId == null) {
-            throw new BusinessException(401, "User not authenticated");
+    public void batchDeleteComments(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
         }
-        String role = SecurityUtil.currentRole();
-        if ("ADMIN".equalsIgnoreCase(role)) {
-            order.setUserId(order.getUserId() == null ? currentUserId : order.getUserId());
-        } else {
-            order.setUserId(currentUserId);
-        }
-        order.setStatus(order.getStatus() == null ? "PENDING" : order.getStatus());
-        exchangeOrderMapper.insert(order);
+        commentInfoMapper.deleteByIds(ids);
     }
 
     public List<FavoriteActivity> myFavorites() {
         return favoriteActivityMapper.selectList(new LambdaQueryWrapper<FavoriteActivity>()
                 .eq(FavoriteActivity::getUserId, SecurityUtil.currentUserId())
+                .orderByDesc(FavoriteActivity::getPriority)
                 .orderByDesc(FavoriteActivity::getCreateTime));
     }
 
+    public PageResult<FavoriteActivity> pageFavorites(long current, long size) {
+        Page<FavoriteActivity> page = new Page<>(current, size);
+        Page<FavoriteActivity> result = favoriteActivityMapper.selectPage(page,
+                new LambdaQueryWrapper<FavoriteActivity>()
+                        .eq(FavoriteActivity::getUserId, SecurityUtil.currentUserId())
+                        .orderByDesc(FavoriteActivity::getPriority)
+                        .orderByDesc(FavoriteActivity::getCreateTime));
+        return new PageResult<>(result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords());
+    }
+
     @Transactional(rollbackFor = Exception.class)
-    public void addFavorite(Long activityId) {
+    public void createFavorite(FavoriteRequest request) {
         Long userId = SecurityUtil.currentUserId();
-        Long count = favoriteActivityMapper.selectCount(new LambdaQueryWrapper<FavoriteActivity>()
+        assertActivityExists(request.getActivityId());
+        FavoriteActivity existing = favoriteActivityMapper.selectOne(new LambdaQueryWrapper<FavoriteActivity>()
                 .eq(FavoriteActivity::getUserId, userId)
-                .eq(FavoriteActivity::getActivityId, activityId));
-        if (count != null && count > 0) {
+                .eq(FavoriteActivity::getActivityId, request.getActivityId())
+                .last("limit 1"));
+        if (existing != null) {
+            existing.setNote(request.getNote());
+            existing.setTag(request.getTag());
+            existing.setPriority(defaultPriority(request.getPriority()));
+            favoriteActivityMapper.updateById(existing);
             return;
         }
         FavoriteActivity favorite = new FavoriteActivity();
         favorite.setUserId(userId);
-        favorite.setActivityId(activityId);
+        favorite.setActivityId(request.getActivityId());
+        favorite.setNote(request.getNote());
+        favorite.setTag(request.getTag());
+        favorite.setPriority(defaultPriority(request.getPriority()));
         favoriteActivityMapper.insert(favorite);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateFavorite(Long id, FavoriteUpdateRequest request) {
+        FavoriteActivity favorite = favoriteActivityMapper.selectById(id);
+        if (favorite == null || !favorite.getUserId().equals(SecurityUtil.currentUserId())) {
+            throw new BusinessException(404, "收藏记录不存在");
+        }
+        favorite.setNote(request.getNote());
+        favorite.setTag(request.getTag());
+        if (request.getPriority() != null) {
+            favorite.setPriority(defaultPriority(request.getPriority()));
+        }
+        favoriteActivityMapper.updateById(favorite);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void removeFavoriteById(Long id) {
+        favoriteActivityMapper.delete(new LambdaQueryWrapper<FavoriteActivity>()
+                .eq(FavoriteActivity::getId, id)
+                .eq(FavoriteActivity::getUserId, SecurityUtil.currentUserId()));
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchRemoveFavoriteById(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        favoriteActivityMapper.delete(new LambdaQueryWrapper<FavoriteActivity>()
+                .eq(FavoriteActivity::getUserId, SecurityUtil.currentUserId())
+                .in(FavoriteActivity::getId, ids));
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void addFavorite(Long activityId) {
+        FavoriteRequest request = new FavoriteRequest();
+        request.setActivityId(activityId);
+        request.setPriority(0);
+        createFavorite(request);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -286,5 +430,22 @@ public class ContentService {
         favoriteActivityMapper.delete(new LambdaQueryWrapper<FavoriteActivity>()
                 .eq(FavoriteActivity::getUserId, SecurityUtil.currentUserId())
                 .eq(FavoriteActivity::getActivityId, activityId));
+    }
+
+    private void assertActivityExists(Long activityId) {
+        if (activityId == null) {
+            throw new BusinessException(400, "请先选择活动");
+        }
+        Activity activity = activityMapper.selectById(activityId);
+        if (activity == null) {
+            throw new BusinessException(404, "活动不存在");
+        }
+    }
+
+    private int defaultPriority(Integer priority) {
+        if (priority == null) {
+            return 0;
+        }
+        return Math.max(0, Math.min(priority, 5));
     }
 }

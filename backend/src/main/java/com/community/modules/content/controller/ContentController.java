@@ -1,13 +1,31 @@
 package com.community.modules.content.controller;
 
+import com.community.common.dto.IdListRequest;
 import com.community.common.web.ApiResponse;
 import com.community.common.web.PageResult;
-import com.community.modules.content.entity.*;
+import com.community.modules.content.dto.FavoriteRequest;
+import com.community.modules.content.dto.FavoriteUpdateRequest;
+import com.community.modules.content.entity.BannerInfo;
+import com.community.modules.content.entity.CommentInfo;
+import com.community.modules.content.entity.FavoriteActivity;
+import com.community.modules.content.entity.ForumCategory;
+import com.community.modules.content.entity.ForumPost;
+import com.community.modules.content.entity.InfoDynamic;
+import com.community.modules.content.entity.NoticeInfo;
 import com.community.modules.content.service.ContentService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +75,22 @@ public class ContentController {
         return ApiResponse.success("updated", null);
     }
 
+    @Operation(summary = "Admin - delete dynamic")
+    @DeleteMapping("/dynamics/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteDynamic(@PathVariable Long id) {
+        contentService.deleteDynamic(id);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch delete dynamics")
+    @PostMapping("/dynamics/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDeleteDynamics(@Valid @RequestBody IdListRequest request) {
+        contentService.batchDeleteDynamics(request.getIds());
+        return ApiResponse.success("batch deleted", null);
+    }
+
     @Operation(summary = "Page notices")
     @GetMapping("/notices/page")
     public ApiResponse<PageResult<NoticeInfo>> pageNotices(@RequestParam(defaultValue = "1") long current,
@@ -81,6 +115,22 @@ public class ContentController {
         return ApiResponse.success("updated", null);
     }
 
+    @Operation(summary = "Admin - delete notice")
+    @DeleteMapping("/notices/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteNotice(@PathVariable Long id) {
+        contentService.deleteNotice(id);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch delete notices")
+    @PostMapping("/notices/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDeleteNotices(@Valid @RequestBody IdListRequest request) {
+        contentService.batchDeleteNotices(request.getIds());
+        return ApiResponse.success("batch deleted", null);
+    }
+
     @Operation(summary = "List active banners")
     @GetMapping("/banners")
     public ApiResponse<List<BannerInfo>> banners() {
@@ -103,6 +153,22 @@ public class ContentController {
         return ApiResponse.success("updated", null);
     }
 
+    @Operation(summary = "Admin - delete banner")
+    @DeleteMapping("/banners/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteBanner(@PathVariable Long id) {
+        contentService.deleteBanner(id);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch delete banners")
+    @PostMapping("/banners/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDeleteBanners(@Valid @RequestBody IdListRequest request) {
+        contentService.batchDeleteBanners(request.getIds());
+        return ApiResponse.success("batch deleted", null);
+    }
+
     @Operation(summary = "List forum categories")
     @GetMapping("/forum/categories")
     public ApiResponse<List<ForumCategory>> forumCategories() {
@@ -123,6 +189,22 @@ public class ContentController {
     public ApiResponse<Void> updateForumCategory(@PathVariable Long id, @RequestBody ForumCategory category) {
         contentService.updateForumCategory(id, category);
         return ApiResponse.success("updated", null);
+    }
+
+    @Operation(summary = "Admin - delete forum category")
+    @DeleteMapping("/forum/categories/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteForumCategory(@PathVariable Long id) {
+        contentService.deleteForumCategory(id);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch delete forum categories")
+    @PostMapping("/forum/categories/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDeleteForumCategories(@Valid @RequestBody IdListRequest request) {
+        contentService.batchDeleteForumCategories(request.getIds());
+        return ApiResponse.success("batch deleted", null);
     }
 
     @Operation(summary = "Page forum posts")
@@ -154,6 +236,22 @@ public class ContentController {
         return ApiResponse.success("audited", null);
     }
 
+    @Operation(summary = "Admin - delete post")
+    @DeleteMapping("/forum/posts/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deletePost(@PathVariable Long id) {
+        contentService.deleteForumPost(id);
+        return ApiResponse.success("deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch delete posts")
+    @PostMapping("/forum/posts/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDeletePosts(@Valid @RequestBody IdListRequest request) {
+        contentService.batchDeleteForumPosts(request.getIds());
+        return ApiResponse.success("batch deleted", null);
+    }
+
     @Operation(summary = "Create comment")
     @PostMapping("/comments")
     @PreAuthorize("hasAnyRole('ADMIN','VOLUNTEER')")
@@ -164,7 +262,6 @@ public class ContentController {
 
     @Operation(summary = "Page comments")
     @GetMapping("/comments/page")
-    @PreAuthorize("hasAnyRole('ADMIN','VOLUNTEER')")
     public ApiResponse<PageResult<CommentInfo>> pageComments(@RequestParam(defaultValue = "1") long current,
                                                              @RequestParam(defaultValue = "10") long size,
                                                              @RequestParam(defaultValue = "false") boolean onlyMine,
@@ -172,21 +269,20 @@ public class ContentController {
         return ApiResponse.success(contentService.pageComments(current, size, onlyMine, targetType));
     }
 
-    @Operation(summary = "Page exchange orders")
-    @GetMapping("/orders/page")
-    @PreAuthorize("hasAnyRole('ADMIN','VOLUNTEER')")
-    public ApiResponse<PageResult<ExchangeOrder>> pageOrders(@RequestParam(defaultValue = "1") long current,
-                                                             @RequestParam(defaultValue = "10") long size,
-                                                             @RequestParam(defaultValue = "false") boolean onlyMine) {
-        return ApiResponse.success(contentService.pageOrders(current, size, onlyMine));
+    @Operation(summary = "Admin - delete comment")
+    @DeleteMapping("/comments/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteComment(@PathVariable Long id) {
+        contentService.deleteComment(id);
+        return ApiResponse.success("deleted", null);
     }
 
-    @Operation(summary = "Create exchange order")
-    @PostMapping("/orders")
-    @PreAuthorize("hasAnyRole('ADMIN','VOLUNTEER')")
-    public ApiResponse<Void> saveOrder(@RequestBody ExchangeOrder order) {
-        contentService.saveOrder(order);
-        return ApiResponse.success("created", null);
+    @Operation(summary = "Admin - batch delete comments")
+    @PostMapping("/comments/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDeleteComments(@Valid @RequestBody IdListRequest request) {
+        contentService.batchDeleteComments(request.getIds());
+        return ApiResponse.success("batch deleted", null);
     }
 
     @Operation(summary = "My favorite activities")
@@ -194,6 +290,46 @@ public class ContentController {
     @PreAuthorize("hasRole('VOLUNTEER')")
     public ApiResponse<List<FavoriteActivity>> myFavorites() {
         return ApiResponse.success(contentService.myFavorites());
+    }
+
+    @Operation(summary = "Page my favorites")
+    @GetMapping("/favorites/page")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<PageResult<FavoriteActivity>> pageFavorites(@RequestParam(defaultValue = "1") long current,
+                                                                   @RequestParam(defaultValue = "10") long size) {
+        return ApiResponse.success(contentService.pageFavorites(current, size));
+    }
+
+    @Operation(summary = "Create favorite")
+    @PostMapping("/favorites")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<Void> createFavorite(@Valid @RequestBody FavoriteRequest request) {
+        contentService.createFavorite(request);
+        return ApiResponse.success("created", null);
+    }
+
+    @Operation(summary = "Update favorite")
+    @PutMapping("/favorites/{id}")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<Void> updateFavorite(@PathVariable Long id, @RequestBody FavoriteUpdateRequest request) {
+        contentService.updateFavorite(id, request);
+        return ApiResponse.success("updated", null);
+    }
+
+    @Operation(summary = "Delete favorite by id")
+    @DeleteMapping("/favorites/id/{id}")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<Void> removeFavoriteById(@PathVariable Long id) {
+        contentService.removeFavoriteById(id);
+        return ApiResponse.success("removed", null);
+    }
+
+    @Operation(summary = "Batch delete favorites")
+    @PostMapping("/favorites/batch-delete")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<Void> batchRemoveFavorites(@Valid @RequestBody IdListRequest request) {
+        contentService.batchRemoveFavoriteById(request.getIds());
+        return ApiResponse.success("batch removed", null);
     }
 
     @Operation(summary = "Add favorite")
@@ -212,4 +348,3 @@ public class ContentController {
         return ApiResponse.success("removed", null);
     }
 }
-

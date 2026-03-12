@@ -1,0 +1,339 @@
+<template>
+  <div>
+    <PortalNavBar />
+    <main class="portal-wrap">
+      <el-card class="module" shadow="never">
+        <section class="toolbar">
+          <div class="category-list">
+            <button
+              class="chip"
+              :class="{ active: selectedCategoryId === undefined }"
+              type="button"
+              @click="changeCategory(undefined)"
+            >
+              全部
+            </button>
+            <button
+              v-for="item in categories"
+              :key="item.id"
+              class="chip"
+              :class="{ active: selectedCategoryId === item.id }"
+              type="button"
+              @click="changeCategory(item.id)"
+            >
+              {{ item.name }}
+            </button>
+          </div>
+
+          <div class="query-panel">
+            <el-input v-model.trim="keyword" placeholder="请输入活动名称查询" clearable @keyup.enter="load" />
+            <el-button type="primary" @click="load">查询</el-button>
+            <el-button @click="reset">重置</el-button>
+          </div>
+        </section>
+
+        <section class="activity-grid">
+          <article v-for="item in activities" :key="item.id" class="activity-card">
+            <div class="cover" :style="{ backgroundImage: `url(${item.coverImage || coverFor(item.id)})` }"></div>
+            <div class="card-main">
+              <h3>{{ item.title }}</h3>
+              <div class="line">
+                <span>活动状态：</span>
+                <el-tag size="small" :type="statusTag(item.status)">{{ statusLabel(item.status) }}</el-tag>
+              </div>
+              <div class="line">
+                <span>活动时间：</span>
+                <strong>{{ formatTime(item.startTime) }} - {{ formatTime(item.endTime) }}</strong>
+              </div>
+              <div class="line">
+                <span>活动地址：</span>
+                <strong>{{ item.address }}</strong>
+              </div>
+              <div class="line">
+                <span>目标人数：</span>
+                <strong>{{ item.targetCount }}</strong>
+              </div>
+              <p class="desc">{{ item.description }}</p>
+              <el-collapse>
+                <el-collapse-item title="查看详细说明" :name="String(item.id)">
+                  <p class="detail">{{ item.description || '暂无详细说明' }}</p>
+                </el-collapse-item>
+              </el-collapse>
+              <div class="actions">
+                <el-button type="primary" @click="apply(item.id)">立即报名</el-button>
+                <el-button type="warning" plain @click="collect(item.id)">收藏活动</el-button>
+                <el-button @click="router.push('/portal/forum')">去论坛交流</el-button>
+              </div>
+            </div>
+          </article>
+
+          <div v-if="!activities.length" class="empty">当前筛选条件下暂无活动</div>
+        </section>
+      </el-card>
+    </main>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import dayjs from 'dayjs'
+import { ElMessage } from 'element-plus'
+import { useRoute, useRouter } from 'vue-router'
+import {
+  applyActivityApi,
+  listCategoriesApi,
+  pageActivitiesApi,
+  type ActivityCategory,
+  type ActivityModel
+} from '@/api/activity'
+import { createFavoriteApi } from '@/api/content'
+import { usePortalNavigation } from '@/composables/usePortalNavigation'
+import { useUserStore } from '@/stores/userStore'
+import PortalNavBar from './PortalNavBar.vue'
+
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+const portalNav = usePortalNavigation()
+const keyword = ref('')
+const categories = ref<ActivityCategory[]>([])
+const activities = ref<ActivityModel[]>([])
+const hasAppliedFromQuery = ref(false)
+const selectedCategoryId = ref<number | undefined>()
+
+const coverList = [
+  'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1519751138087-5bf79df62d5b?auto=format&fit=crop&w=900&q=80'
+]
+
+function coverFor(id: number) {
+  return coverList[id % coverList.length]
+}
+
+function formatTime(value: string) {
+  return dayjs(value).format('YYYY-MM-DD HH:mm')
+}
+
+function statusLabel(status: string) {
+  if (status === 'PUBLISHED') return '报名中'
+  if (status === 'ONGOING') return '进行中'
+  if (status === 'ENDED') return '已结束'
+  return status
+}
+
+function statusTag(status: string) {
+  if (status === 'PUBLISHED') return 'success'
+  if (status === 'ONGOING') return 'warning'
+  if (status === 'ENDED') return 'info'
+  return undefined
+}
+
+async function load() {
+  const res = await pageActivitiesApi({
+    current: 1,
+    size: 50,
+    keyword: keyword.value || undefined,
+    categoryId: selectedCategoryId.value,
+    status: 'PUBLISHED'
+  })
+  activities.value = res.records
+}
+
+function changeCategory(categoryId: number | undefined) {
+  selectedCategoryId.value = categoryId
+  load()
+}
+
+function reset() {
+  keyword.value = ''
+  selectedCategoryId.value = undefined
+  load()
+}
+
+async function apply(activityId: number) {
+  await portalNav.requireLogin(
+    async () => {
+      if (userStore.role !== 'VOLUNTEER') {
+        ElMessage.warning('请使用志愿者账号登录后报名活动')
+        return
+      }
+      await applyActivityApi(activityId)
+      ElMessage.success('报名申请已提交，请等待管理员审核')
+    },
+    `/portal/activities?apply=${activityId}`
+  )
+}
+
+async function collect(activityId: number) {
+  await portalNav.requireLogin(
+    async () => {
+      if (userStore.role !== 'VOLUNTEER') {
+        ElMessage.warning('请使用志愿者账号登录后收藏活动')
+        return
+      }
+      await createFavoriteApi({ activityId })
+      ElMessage.success('已加入收藏')
+    },
+    '/portal/activities'
+  )
+}
+
+async function handleAutoApply() {
+  const applyId = Number(route.query.apply)
+  if (hasAppliedFromQuery.value || !applyId || Number.isNaN(applyId)) return
+  if (!portalNav.isLogin.value) return
+  hasAppliedFromQuery.value = true
+  await apply(applyId)
+  router.replace('/portal/activities')
+}
+
+onMounted(async () => {
+  categories.value = await listCategoriesApi()
+  await load()
+  await handleAutoApply()
+})
+</script>
+
+<style scoped>
+.portal-wrap {
+  width: min(1220px, calc(100% - 24px));
+  margin: 14px auto 40px;
+}
+
+.module {
+  border: 1px solid var(--cvs-border);
+  border-radius: 16px;
+}
+
+.toolbar {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid #d94262;
+  border-radius: 9px;
+  background: #fff;
+  color: #b4183f;
+  font-weight: 700;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip.active,
+.chip:hover {
+  color: #fff;
+  background: linear-gradient(120deg, #d91f4c, #f23d64);
+  border-color: #d91f4c;
+}
+
+.query-panel {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+}
+
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.activity-card {
+  border: 1px solid var(--cvs-border);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.activity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px rgba(49, 33, 33, 0.12);
+}
+
+.cover {
+  height: 170px;
+  background-size: cover;
+  background-position: center;
+}
+
+.card-main {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.card-main h3 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.line span {
+  color: #6b7772;
+}
+
+.line strong {
+  color: #2d3834;
+  font-weight: 600;
+}
+
+.desc {
+  margin: 0;
+  color: #586460;
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.detail {
+  margin: 0;
+  color: #3f4f4a;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.empty {
+  border: 1px dashed #d9dee2;
+  border-radius: 12px;
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  color: #75817c;
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 860px) {
+  .query-panel {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

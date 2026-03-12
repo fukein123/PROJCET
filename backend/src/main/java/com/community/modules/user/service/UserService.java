@@ -40,11 +40,11 @@ public class UserService {
     public User getCurrentUser() {
         Long userId = SecurityUtil.currentUserId();
         if (userId == null) {
-            throw new BusinessException(401, "User not authenticated");
+            throw new BusinessException(401, "用户未登录");
         }
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new BusinessException(404, "User not found");
+            throw new BusinessException(404, "用户不存在");
         }
         user.setPassword(null);
         return user;
@@ -53,11 +53,11 @@ public class UserService {
     public void updateCurrentUser(UserUpdateRequest request) {
         Long userId = SecurityUtil.currentUserId();
         if (userId == null) {
-            throw new BusinessException(401, "User not authenticated");
+            throw new BusinessException(401, "用户未登录");
         }
         User dbUser = userMapper.selectById(userId);
         if (dbUser == null) {
-            throw new BusinessException(404, "User not found");
+            throw new BusinessException(404, "用户不存在");
         }
         if (!dbUser.getUsername().equals(request.getUsername())) {
             ensureUsernameAvailable(request.getUsername(), userId);
@@ -74,14 +74,14 @@ public class UserService {
     public void updatePassword(PasswordUpdateRequest request) {
         Long userId = SecurityUtil.currentUserId();
         if (userId == null) {
-            throw new BusinessException(401, "User not authenticated");
+            throw new BusinessException(401, "用户未登录");
         }
         User dbUser = userMapper.selectById(userId);
         if (dbUser == null) {
-            throw new BusinessException(404, "User not found");
+            throw new BusinessException(404, "用户不存在");
         }
         if (!passwordEncoder.matches(request.getOldPassword(), dbUser.getPassword())) {
-            throw new BusinessException("Old password is incorrect");
+            throw new BusinessException("原密码错误");
         }
         dbUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userMapper.updateById(dbUser);
@@ -90,7 +90,7 @@ public class UserService {
     public void adminUpdateUser(Long id, UserUpdateRequest request) {
         User user = userMapper.selectById(id);
         if (user == null) {
-            throw new BusinessException(404, "User not found");
+            throw new BusinessException(404, "用户不存在");
         }
         if (!user.getUsername().equals(request.getUsername())) {
             ensureUsernameAvailable(request.getUsername(), id);
@@ -118,7 +118,7 @@ public class UserService {
                 .eq(User::getUsername, username)
                 .ne(excludeUserId != null, User::getId, excludeUserId));
         if (count != null && count > 0) {
-            throw new BusinessException("Username already exists");
+            throw new BusinessException("用户名已存在");
         }
     }
 }

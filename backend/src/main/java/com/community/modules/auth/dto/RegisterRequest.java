@@ -6,22 +6,21 @@ import lombok.Data;
 
 @Data
 public class RegisterRequest {
-    @NotBlank(message = "Username is required")
+    @NotBlank(message = "请输入用户名")
     private String username;
 
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "请输入密码")
     private String password;
 
-    @NotBlank(message = "Confirm password is required")
+    @NotBlank(message = "请输入确认密码")
     private String confirmPassword;
 
-    @Email(message = "Email is invalid")
+    @Email(message = "邮箱格式不正确")
     private String email;
 
-    @NotBlank(message = "Phone is required")
+    @NotBlank(message = "请输入手机号")
     private String phone;
 
     private String gender;
     private String avatar;
 }
-

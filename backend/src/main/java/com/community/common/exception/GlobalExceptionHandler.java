@@ -46,17 +46,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ApiResponse<Void> handleNotReadable(HttpMessageNotReadableException ex) {
-        return ApiResponse.fail(400, "Request body is invalid");
+        return ApiResponse.fail(400, "请求参数格式不正确");
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ApiResponse<Void> handleAccessDenied(AccessDeniedException ex) {
-        return ApiResponse.fail(403, "No permission to access this resource");
+        return ApiResponse.fail(403, "无权限访问该资源");
     }
 
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception ex) {
-        return ApiResponse.fail(500, ex.getMessage());
+        return ApiResponse.fail(500, "系统异常，请稍后重试");
     }
 }
-

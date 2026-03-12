@@ -17,10 +17,10 @@ public class InfoDynamic extends BaseEntity {
     private Long id;
     private String title;
     private String content;
+    private String imageUrl;
     private String type;
     private Integer views;
     private Integer status;
     private LocalDateTime publishTime;
     private Long authorId;
 }
-

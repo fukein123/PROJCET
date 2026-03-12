@@ -23,8 +23,8 @@ public class Activity extends BaseEntity {
     private String status;
     private Integer targetCount;
     private String description;
+    private String coverImage;
     private Double latitude;
     private Double longitude;
     private Long creatorId;
 }
-

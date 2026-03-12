@@ -30,13 +30,16 @@ public class AuthService {
                 .eq(User::getUsername, request.getUsername())
                 .last("limit 1"));
         if (user == null) {
-            throw new BusinessException("Username or password is incorrect");
+            throw new BusinessException("账号或密码错误");
         }
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException("Username or password is incorrect");
+            throw new BusinessException("账号或密码错误");
+        }
+        if (StrUtil.isNotBlank(request.getRole()) && !StrUtil.equalsIgnoreCase(request.getRole(), user.getRole())) {
+            throw new BusinessException("账号角色不匹配，请选择正确的登录入口");
         }
         if (user.getStatus() != null && user.getStatus() == 0) {
-            throw new BusinessException("Account is disabled");
+            throw new BusinessException("账号已被禁用");
         }
         String token = jwtTokenUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
         return new AuthTokenResponse(token, user.getId(), user.getUsername(), user.getRole());
@@ -45,12 +48,12 @@ public class AuthService {
     @Transactional(rollbackFor = Exception.class)
     public void register(RegisterRequest request) {
         if (!StrUtil.equals(request.getPassword(), request.getConfirmPassword())) {
-            throw new BusinessException("Password and confirm password do not match");
+            throw new BusinessException("两次输入的密码不一致");
         }
         Long count = userMapper.selectCount(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, request.getUsername()));
         if (count != null && count > 0) {
-            throw new BusinessException("Username already exists");
+            throw new BusinessException("用户名已存在");
         }
 
         User user = new User();

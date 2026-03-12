@@ -25,13 +25,12 @@ public class DbUserDetailsService implements UserDetailsService {
                 .eq(User::getUsername, username)
                 .last("limit 1"));
         if (user == null) {
-            throw new UsernameNotFoundException("User does not exist");
+            throw new UsernameNotFoundException("用户不存在");
         }
         if (user.getStatus() != null && user.getStatus() == 0) {
-            throw new UsernameNotFoundException("User is disabled");
+            throw new UsernameNotFoundException("账号已被禁用");
         }
         List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
         return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(), authorities);
     }
 }
-

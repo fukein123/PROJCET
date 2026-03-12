@@ -12,6 +12,10 @@ spring:
   mvc:
     format:
       date-time: yyyy-MM-dd HH:mm:ss
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
 
 mybatis-plus:
   configuration:
@@ -29,7 +33,7 @@ springdoc:
     path: /swagger-ui.html
 
 app:
+  upload-dir: uploads
   jwt:
     secret: "CVS_SUPER_LONG_JWT_SECRET_KEY_FOR_JAVA21_AND_SPRINGBOOT3_2026_SECURE"
     expire-seconds: 86400
-
