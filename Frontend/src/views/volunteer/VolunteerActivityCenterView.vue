@@ -1,9 +1,10 @@
 <template>
   <div class="fade-up">
-    <SearchForm @search="load" @reset="reset">
+    <SearchForm @search="load" @reset="resetQuery">
       <el-form-item label="活动名称">
         <el-input v-model="query.keyword" placeholder="活动名称" />
       </el-form-item>
+
       <el-form-item label="活动分类">
         <el-select v-model="query.categoryId" clearable style="width: 160px">
           <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
@@ -15,15 +16,15 @@
       <el-table :data="list" border>
         <el-table-column label="封面" width="100">
           <template #default="{ row }">
-            <img class="cover-mini" :src="row.coverImage || defaultCover" alt="活动封面" />
+            <img class="cover-mini" :src="row.coverImage || DEFAULT_ACTIVITY_COVER" alt="活动封面" />
           </template>
         </el-table-column>
         <el-table-column prop="title" label="活动名称" min-width="180" />
         <el-table-column prop="content" label="活动内容" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="address" label="活动地址" min-width="160" />
+        <el-table-column prop="address" label="活动地点" min-width="160" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="getActivityStatusTag(row.status)">{{ getActivityStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="volunteerQuota" label="志愿者人数" width="110" />
@@ -36,6 +37,7 @@
           </template>
         </el-table-column>
       </el-table>
+
       <div class="footer">
         <el-pagination
           layout="total, sizes, prev, pager, next"
@@ -52,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import SearchForm from '@/components/SearchForm.vue'
@@ -64,67 +66,46 @@ import {
   type ActivityModel
 } from '@/api/activity'
 import { createFavoriteApi } from '@/api/content'
+import { useTable } from '@/composables/useTable'
+import { DEFAULT_ACTIVITY_COVER, getActivityStatusLabel, getActivityStatusTag } from '@/utils/display'
+
+interface VolunteerActivityQuery {
+  current: number
+  size: number
+  keyword: string
+  categoryId?: number
+}
 
 const router = useRouter()
-
-const defaultCover =
-  'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=700&q=80'
-
 const categories = ref<ActivityCategory[]>([])
-const list = ref<ActivityModel[]>([])
-const total = ref(0)
-const query = reactive({
-  current: 1,
-  size: 10,
-  keyword: '',
-  categoryId: undefined as number | undefined
+
+const { records: list, total, query, load, reset, handlePage, handleSizeChange } = useTable<
+  ActivityModel,
+  VolunteerActivityQuery
+>({
+  initialQuery: {
+    current: 1,
+    size: 10,
+    keyword: '',
+    categoryId: undefined
+  },
+  fetcher: (params) =>
+    pageActivitiesApi({
+      current: params.current,
+      size: params.size,
+      keyword: params.keyword || undefined,
+      categoryId: params.categoryId
+    })
 })
 
-async function load() {
-  const res = await pageActivitiesApi({
-    current: query.current,
-    size: query.size,
-    keyword: query.keyword || undefined,
-    categoryId: query.categoryId
+function resetQuery() {
+  reset({
+    categoryId: undefined
   })
-  list.value = res.records
-  total.value = res.total
-}
-
-function handlePage(page: number) {
-  query.current = page
-  load()
-}
-
-function handleSizeChange(size: number) {
-  query.size = size
-  query.current = 1
-  load()
-}
-
-function reset() {
-  query.current = 1
-  query.keyword = ''
-  query.categoryId = undefined
-  load()
 }
 
 function toDetail(activityId: number) {
   router.push(`/volunteer/activity-detail/${activityId}`)
-}
-
-function statusLabel(status: string) {
-  if (status === 'PUBLISHED') return '报名中'
-  if (status === 'ONGOING') return '进行中'
-  if (status === 'ENDED') return '已结束'
-  return status
-}
-
-function statusTag(status: string) {
-  if (status === 'PUBLISHED') return 'success'
-  if (status === 'ONGOING') return 'warning'
-  if (status === 'ENDED') return 'info'
-  return undefined
 }
 
 async function apply(activityId: number) {

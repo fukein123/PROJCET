@@ -2,12 +2,12 @@
   <div class="fade-up">
     <el-card class="module" shadow="never">
       <el-table :data="list" border>
-        <el-table-column prop="id" label="申请ID" width="90" />
+        <el-table-column prop="id" label="申请 ID" width="90" />
         <el-table-column prop="activityTitle" label="活动名称" min-width="180" />
         <el-table-column prop="realName" label="志愿者姓名" width="120" />
         <el-table-column prop="status" label="审核状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="getApplicationStatusTag(row.status)">{{ getApplicationStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="rejectReason" label="拒绝理由" min-width="160" />
@@ -19,6 +19,7 @@
           </template>
         </el-table-column>
       </el-table>
+
       <div class="footer">
         <el-pagination
           layout="total, prev, pager, next"
@@ -33,41 +34,24 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { myApplicationsApi, signInApi, signOutApi, type ApplicationModel } from '@/api/activity'
+import { useTable } from '@/composables/useTable'
+import { getApplicationStatusLabel, getApplicationStatusTag } from '@/utils/display'
 
-const list = ref<ApplicationModel[]>([])
-const total = ref(0)
-const query = reactive({
-  current: 1,
-  size: 10
+interface MyApplicationQuery {
+  current: number
+  size: number
+}
+
+const { records: list, total, query, load, handlePage } = useTable<ApplicationModel, MyApplicationQuery>({
+  initialQuery: {
+    current: 1,
+    size: 10
+  },
+  fetcher: (params) => myApplicationsApi({ current: params.current, size: params.size })
 })
-
-async function load() {
-  const res = await myApplicationsApi({ current: query.current, size: query.size })
-  list.value = res.records
-  total.value = res.total
-}
-
-function handlePage(page: number) {
-  query.current = page
-  load()
-}
-
-function statusLabel(status: string) {
-  if (status === 'PENDING') return '待审核'
-  if (status === 'APPROVED') return '已通过'
-  if (status === 'REJECTED') return '已拒绝'
-  return status
-}
-
-function statusTag(status: string) {
-  if (status === 'PENDING') return 'warning'
-  if (status === 'APPROVED') return 'success'
-  if (status === 'REJECTED') return 'danger'
-  return 'info'
-}
 
 async function signIn(applicationId: number) {
   await signInApi({ applicationId })

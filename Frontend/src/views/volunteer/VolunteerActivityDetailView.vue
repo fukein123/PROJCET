@@ -9,17 +9,15 @@
       </template>
 
       <div v-if="activity" class="detail-layout">
-        <img class="cover" :src="activity.coverImage || defaultCover" alt="活动封面" />
+        <img class="cover" :src="activity.coverImage || DEFAULT_ACTIVITY_COVER" alt="活动封面" />
         <div class="meta">
           <h2>{{ activity.title }}</h2>
           <p class="line"><span>活动内容：</span>{{ activity.content }}</p>
           <p class="line"><span>活动地点：</span>{{ activity.address }}</p>
-          <p class="line">
-            <span>活动时间：</span>{{ formatTime(activity.startTime) }} - {{ formatTime(activity.endTime) }}
-          </p>
+          <p class="line"><span>活动时间：</span>{{ formatDateTime(activity.startTime) }} - {{ formatDateTime(activity.endTime) }}</p>
           <p class="line"><span>志愿者人数：</span>{{ activity.volunteerQuota }}</p>
           <p class="line"><span>目标人数：</span>{{ activity.targetCount }}</p>
-          <p class="line"><span>活动状态：</span>{{ statusLabel(activity.status) }}</p>
+          <p class="line"><span>活动状态：</span>{{ getActivityStatusLabel(activity.status) }}</p>
           <div class="actions">
             <el-button type="success" @click="apply">报名活动</el-button>
             <el-button type="warning" plain @click="collect">收藏活动</el-button>
@@ -46,10 +44,11 @@
         </div>
 
         <el-table :data="comments" border>
-          <el-table-column prop="id" label="评论ID" width="90" />
-          <el-table-column prop="userId" label="用户ID" width="90" />
+          <el-table-column prop="id" label="评论 ID" width="90" />
+          <el-table-column prop="userId" label="用户 ID" width="90" />
           <el-table-column prop="content" label="评价内容" min-width="420" />
         </el-table>
+
         <div class="footer">
           <el-pagination
             layout="total, prev, pager, next"
@@ -66,11 +65,11 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { activityDetailApi, applyActivityApi, type ActivityModel } from '@/api/activity'
 import { addCommentApi, createFavoriteApi, pageCommentsApi, type CommentModel } from '@/api/content'
+import { DEFAULT_ACTIVITY_COVER, formatDateTime, getActivityStatusLabel } from '@/utils/display'
 
 const route = useRoute()
 const router = useRouter()
@@ -85,20 +84,6 @@ const commentQuery = reactive({
   current: 1,
   size: 8
 })
-
-const defaultCover =
-  'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=700&q=80'
-
-function formatTime(value: string) {
-  return dayjs(value).format('YYYY-MM-DD HH:mm')
-}
-
-function statusLabel(status: string) {
-  if (status === 'PUBLISHED') return '报名中'
-  if (status === 'ONGOING') return '进行中'
-  if (status === 'ENDED') return '已结束'
-  return status
-}
 
 async function loadDetail() {
   activity.value = await activityDetailApi(activityId)
@@ -135,6 +120,7 @@ async function submitComment() {
     ElMessage.warning('请先输入评价内容')
     return
   }
+
   await addCommentApi({
     targetType: 'ACTIVITY',
     targetId: activityId,

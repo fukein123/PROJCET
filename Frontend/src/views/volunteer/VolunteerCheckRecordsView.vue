@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="fade-up">
     <el-card class="module" shadow="never">
       <el-table :data="list" border>
@@ -11,10 +11,11 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="getCheckRecordStatusTag(row.status)">{{ getCheckRecordStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
       </el-table>
+
       <div class="footer">
         <el-pagination
           layout="total, prev, pager, next"
@@ -29,47 +30,23 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted } from 'vue'
 import { myCheckRecordsApi, type CheckRecordModel } from '@/api/activity'
+import { useTable } from '@/composables/useTable'
+import { getCheckRecordStatusLabel, getCheckRecordStatusTag, toServiceHours } from '@/utils/display'
 
-const list = ref<CheckRecordModel[]>([])
-const total = ref(0)
-const query = reactive({
-  current: 1,
-  size: 10
+interface CheckRecordQuery {
+  current: number
+  size: number
+}
+
+const { records: list, total, query, load, handlePage } = useTable<CheckRecordModel, CheckRecordQuery>({
+  initialQuery: {
+    current: 1,
+    size: 10
+  },
+  fetcher: (params) => myCheckRecordsApi({ current: params.current, size: params.size })
 })
-
-function statusLabel(status: string) {
-  if (status === 'SIGNED_IN') return '已签到'
-  if (status === 'FINISHED') return '已完成'
-  return status || '未知'
-}
-
-function statusTag(status: string) {
-  if (status === 'SIGNED_IN') return 'warning'
-  if (status === 'FINISHED') return 'success'
-  return 'info'
-}
-
-function toServiceHours(minutes?: number) {
-  const value = minutes || 0
-  if (!value) return '0 分钟'
-  const hours = Math.floor(value / 60)
-  const mins = value % 60
-  if (!hours) return `${mins} 分钟`
-  return `${hours} 小时 ${mins} 分钟`
-}
-
-async function load() {
-  const res = await myCheckRecordsApi(query)
-  list.value = res.records
-  total.value = res.total
-}
-
-function handlePage(page: number) {
-  query.current = page
-  load()
-}
 
 onMounted(load)
 </script>

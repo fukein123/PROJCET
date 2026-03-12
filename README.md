@@ -1,11 +1,22 @@
-# zero2.0 - 社区志愿服务管理系统（CVS）
+# zero2.0
 
-前后端分离项目，包含：
+社区志愿服务管理系统，采用前后端分离结构：
 
-- `backend`：Spring Boot 3.5 + MyBatis-Plus + JWT + Spring Security + OpenAPI
-- `Frontend`：Vue 3 + Element Plus + TypeScript + Pinia + Vue Router + Axios + ECharts
-- `skills`：本地开发技能库
-- `file`：项目文档（开发、接口、配置、设计、部署）
+- `backend`：Java 21 + Spring Boot 3.5 + Spring Security + JWT + MyBatis-Plus
+- `Frontend`：Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router
+- `file`：需求、设计、部署、迭代记录等项目文档
+- `skills`：项目内保留的核心开发 skill
+
+## 项目结构
+
+```text
+zero/
+├─ backend/
+├─ Frontend/
+├─ file/
+├─ skills/
+└─ README.md
+```
 
 ## 快速启动
 
@@ -42,7 +53,15 @@ npm run dev
 - 管理员：`admin / 123456`
 - 志愿者：`volunteer / 123456`
 
-## 文档导航
+## 开发约定
+
+- 前端只通过 `Frontend/src/api/*` 调用后端 REST 接口。
+- 后端统一返回 `ApiResponse`，分页统一使用 `PageResult`。
+- 结构治理、功能补足和每轮验证记录统一写入 `file/` 目录。
+- 当前本地核心 skill 仅保留 `frontend-design`、`webapp-testing`、`pdf`，其他按需再装。
+
+## 文档索引
 
 - 文档目录：`file/`
-- 文档索引：`file/README.md`
+- 索引文件：`file/README.md`
+- 本轮治理计划：`file/12-阶段治理与迭代计划.md`

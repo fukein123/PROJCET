@@ -23,11 +23,12 @@
           </div>
         </div>
       </template>
+
       <el-table :data="list" border v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="48" />
         <el-table-column label="封面" width="96">
           <template #default="{ row }">
-            <img class="cover-mini" :src="row.coverImage || defaultCover" alt="活动封面" />
+            <img class="cover-mini" :src="row.coverImage || DEFAULT_ACTIVITY_COVER" alt="活动封面" />
           </template>
         </el-table-column>
         <el-table-column prop="title" label="活动名称" min-width="180" />
@@ -35,14 +36,14 @@
         <el-table-column prop="address" label="活动地点" min-width="180" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="getActivityStatusTag(row.status)">{{ getActivityStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="volunteerQuota" label="志愿者人数" width="110" />
         <el-table-column prop="targetCount" label="目标人数" width="100" />
         <el-table-column label="时间" min-width="220">
           <template #default="{ row }">
-            {{ formatTime(row.startTime) }} - {{ formatTime(row.endTime) }}
+            {{ formatDateTime(row.startTime) }} - {{ formatDateTime(row.endTime) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="190">
@@ -52,6 +53,7 @@
           </template>
         </el-table-column>
       </el-table>
+
       <div class="footer">
         <el-pagination
           layout="total, sizes, prev, pager, next"
@@ -83,6 +85,7 @@
               <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
           </el-form-item>
+
           <el-form-item label="状态" prop="status">
             <el-select v-model="form.status">
               <el-option label="已发布" value="PUBLISHED" />
@@ -106,6 +109,7 @@
           <el-form-item label="开始时间" prop="startTime">
             <el-date-picker v-model="form.startTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" />
           </el-form-item>
+
           <el-form-item label="结束时间" prop="endTime">
             <el-date-picker v-model="form.endTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" />
           </el-form-item>
@@ -126,13 +130,14 @@
           <el-form-item label="志愿者人数" prop="volunteerQuota">
             <el-input-number v-model="form.volunteerQuota" :min="1" />
           </el-form-item>
+
           <el-form-item label="目标人数" prop="targetCount">
             <el-input-number v-model="form.targetCount" :min="1" />
           </el-form-item>
 
           <el-form-item label="活动封面" class="span-2">
             <div class="uploader">
-              <img :src="form.coverImage || defaultCover" class="cover-preview" alt="活动封面" />
+              <img :src="form.coverImage || DEFAULT_ACTIVITY_COVER" class="cover-preview" alt="活动封面" />
               <div class="uploader-actions">
                 <el-upload
                   :show-file-list="false"
@@ -157,6 +162,7 @@
           </el-form-item>
         </div>
       </el-form>
+
       <template #footer>
         <el-button @click="drawerVisible = false">取消</el-button>
         <el-button type="primary" @click="submit">保存</el-button>
@@ -168,7 +174,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import type { FormInstance, FormRules, UploadProps, UploadRequestOptions } from 'element-plus'
-import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SearchForm from '@/components/SearchForm.vue'
 import { uploadImageApi } from '@/api/common'
@@ -182,21 +187,48 @@ import {
   type ActivityCategory,
   type ActivityModel
 } from '@/api/activity'
+import { useTable } from '@/composables/useTable'
+import {
+  DEFAULT_ACTIVITY_COVER,
+  formatDateTime,
+  getActivityStatusLabel,
+  getActivityStatusTag
+} from '@/utils/display'
+import { validateImageFile } from '@/utils/upload'
 
-const defaultCover =
-  'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=700&q=80'
+interface ActivityQuery {
+  current: number
+  size: number
+  keyword: string
+  status: string
+}
 
-const loading = ref(false)
-const list = ref<ActivityModel[]>([])
-const total = ref(0)
-const selectedIds = ref<number[]>([])
-const query = reactive({
-  current: 1,
-  size: 10,
-  keyword: '',
-  status: ''
+const {
+  loading,
+  records: list,
+  total,
+  query,
+  load,
+  reset,
+  handlePage,
+  handleSizeChange
+} = useTable<ActivityModel, ActivityQuery>({
+  initialQuery: {
+    current: 1,
+    size: 10,
+    keyword: '',
+    status: ''
+  },
+  fetcher: (params) =>
+    pageActivitiesApi({
+      current: params.current,
+      size: params.size,
+      keyword: params.keyword || undefined,
+      status: params.status || undefined
+    })
 })
 
+const selectedIds = ref<number[]>([])
 const drawerVisible = ref(false)
 const editingId = ref<number>()
 const categories = ref<ActivityCategory[]>([])
@@ -231,7 +263,10 @@ const rules: FormRules = {
 }
 
 function syncRangeToTime(value: [string, string] | null) {
-  if (!value) return
+  if (!value) {
+    return
+  }
+
   form.startTime = value[0]
   form.endTime = value[1]
 }
@@ -240,35 +275,7 @@ function handleSelectionChange(rows: ActivityModel[]) {
   selectedIds.value = rows.map((row) => row.id)
 }
 
-function formatTime(value: string) {
-  return dayjs(value).format('YYYY-MM-DD HH:mm')
-}
-
-function statusLabel(status: string) {
-  if (status === 'PUBLISHED') return '报名中'
-  if (status === 'ONGOING') return '进行中'
-  if (status === 'ENDED') return '已结束'
-  return status
-}
-
-function statusTag(status: string) {
-  if (status === 'PUBLISHED') return 'success'
-  if (status === 'ONGOING') return 'warning'
-  if (status === 'ENDED') return 'info'
-  return undefined
-}
-
-const beforeCoverUpload: UploadProps['beforeUpload'] = (rawFile) => {
-  if (!rawFile.type.startsWith('image/')) {
-    ElMessage.warning('仅支持上传图片文件')
-    return false
-  }
-  if (rawFile.size / 1024 / 1024 > 5) {
-    ElMessage.warning('图片大小不能超过 5MB')
-    return false
-  }
-  return true
-}
+const beforeCoverUpload: UploadProps['beforeUpload'] = (rawFile) => validateImageFile(rawFile)
 
 async function handleCoverUpload(option: UploadRequestOptions) {
   coverUploading.value = true
@@ -279,44 +286,14 @@ async function handleCoverUpload(option: UploadRequestOptions) {
     ElMessage.success('封面上传成功')
     option.onSuccess?.(res)
   } catch (error) {
-    option.onError?.(error as any)
+    option.onError?.(error as never)
   } finally {
     coverUploading.value = false
   }
 }
 
-async function load() {
-  loading.value = true
-  try {
-    const res = await pageActivitiesApi({
-      current: query.current,
-      size: query.size,
-      keyword: query.keyword || undefined,
-      status: query.status || undefined
-    })
-    list.value = res.records
-    total.value = res.total
-  } finally {
-    loading.value = false
-  }
-}
-
-function handlePage(page: number) {
-  query.current = page
-  load()
-}
-
-function handleSizeChange(size: number) {
-  query.size = size
-  query.current = 1
-  load()
-}
-
 function resetQuery() {
-  query.current = 1
-  query.keyword = ''
-  query.status = ''
-  load()
+  reset()
 }
 
 function openCreate() {
@@ -346,17 +323,24 @@ function openEdit(row: ActivityModel) {
 }
 
 async function submit() {
-  if (!formRef.value) return
+  if (!formRef.value) {
+    return
+  }
+
   await formRef.value.validate()
-  if (dayjs(form.endTime as string).isBefore(dayjs(form.startTime as string))) {
+  const start = new Date(form.startTime as string).getTime()
+  const end = new Date(form.endTime as string).getTime()
+  if (Number.isFinite(start) && Number.isFinite(end) && end <= start) {
     ElMessage.warning('结束时间必须晚于开始时间')
     return
   }
+
   if (editingId.value) {
     await updateActivityApi(editingId.value, form)
   } else {
     await createActivityApi(form)
   }
+
   drawerVisible.value = false
   ElMessage.success(editingId.value ? '活动更新成功' : '活动创建成功')
   await load()
@@ -372,13 +356,16 @@ async function removeOne(id: number) {
 }
 
 async function batchRemove() {
-  if (!selectedIds.value.length) return
+  if (!selectedIds.value.length) {
+    return
+  }
+
   await ElMessageBox.confirm(`确认批量删除 ${selectedIds.value.length} 个活动？`, '批量删除活动', {
     type: 'warning'
   })
   await batchDeleteActivitiesApi(selectedIds.value)
-  ElMessage.success('批量删除成功')
   selectedIds.value = []
+  ElMessage.success('批量删除成功')
   await load()
 }
 

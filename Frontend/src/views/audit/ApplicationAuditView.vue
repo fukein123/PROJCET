@@ -12,13 +12,13 @@
 
     <el-card class="module" shadow="never">
       <el-table :data="list" border v-loading="loading">
-        <el-table-column prop="id" label="申请ID" width="90" />
+        <el-table-column prop="id" label="申请 ID" width="90" />
         <el-table-column prop="activityTitle" label="活动名称" min-width="170" />
         <el-table-column prop="username" label="账号" min-width="120" />
         <el-table-column prop="realName" label="姓名" min-width="120" />
         <el-table-column prop="status" label="状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="tagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="getApplicationStatusTag(row.status)">{{ getApplicationStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="rejectReason" label="拒绝理由" min-width="180" />
@@ -41,6 +41,7 @@
           </template>
         </el-table-column>
       </el-table>
+
       <div class="footer">
         <el-pagination
           layout="total, sizes, prev, pager, next"
@@ -57,63 +58,38 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SearchForm from '@/components/SearchForm.vue'
 import { auditApplicationApi, pageApplicationsApi, type ApplicationModel } from '@/api/activity'
+import { useTable } from '@/composables/useTable'
+import { getApplicationStatusLabel, getApplicationStatusTag } from '@/utils/display'
 
-const loading = ref(false)
-const list = ref<ApplicationModel[]>([])
-const total = ref(0)
-const query = reactive({
-  current: 1,
-  size: 10,
-  status: ''
+interface ApplicationQuery {
+  current: number
+  size: number
+  status: string
+}
+
+const { loading, records: list, total, query, load, reset, handlePage, handleSizeChange } = useTable<
+  ApplicationModel,
+  ApplicationQuery
+>({
+  initialQuery: {
+    current: 1,
+    size: 10,
+    status: ''
+  },
+  fetcher: (params) =>
+    pageApplicationsApi({
+      current: params.current,
+      size: params.size,
+      status: params.status || undefined
+    })
 })
 
-function tagType(status: string) {
-  if (status === 'APPROVED') return 'success'
-  if (status === 'REJECTED') return 'danger'
-  return 'warning'
-}
-
-function statusLabel(status: string) {
-  if (status === 'APPROVED') return '已通过'
-  if (status === 'REJECTED') return '已拒绝'
-  if (status === 'PENDING') return '待审核'
-  return status
-}
-
-async function load() {
-  loading.value = true
-  try {
-    const res = await pageApplicationsApi({
-      current: query.current,
-      size: query.size,
-      status: query.status || undefined
-    })
-    list.value = res.records
-    total.value = res.total
-  } finally {
-    loading.value = false
-  }
-}
-
-function handlePage(page: number) {
-  query.current = page
-  load()
-}
-
-function handleSizeChange(size: number) {
-  query.size = size
-  query.current = 1
-  load()
-}
-
 function resetQuery() {
-  query.current = 1
-  query.status = ''
-  load()
+  reset()
 }
 
 async function audit(id: number, status: string, rejectReason?: string) {

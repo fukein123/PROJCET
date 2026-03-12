@@ -16,11 +16,14 @@ backend/target/
 backend/.flattened-pom.xml
 
 # Frontend
-admin/node_modules/
-admin/dist/
-admin/.vite/
-admin/.cache/
-admin/.env.local
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.vite/
+Frontend/.cache/
+Frontend/.env.local
+
+# Spec workflow runtime
+.spec-workflow/approvals/
 
 # Misc
 *.tmp

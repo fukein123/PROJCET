@@ -3,24 +3,39 @@ import { reactive, ref } from 'vue'
 export interface TableQuery {
   current: number
   size: number
-  [key: string]: string | number | undefined
 }
 
-export function useTable<T extends object>(
-  fetcher: (params: TableQuery) => Promise<{ total: number; records: T[] }>
-) {
+interface PagedResult<T> {
+  total: number
+  records: T[]
+}
+
+interface UseTableOptions<TRecord, TQuery extends TableQuery> {
+  initialQuery: TQuery
+  fetcher: (params: TQuery) => Promise<PagedResult<TRecord>>
+}
+
+function cloneInitialQuery<TQuery extends TableQuery>(initialQuery: TQuery): TQuery {
+  return { ...initialQuery }
+}
+
+export function useTable<TRecord, TQuery extends TableQuery>({
+  initialQuery,
+  fetcher
+}: UseTableOptions<TRecord, TQuery>) {
   const loading = ref(false)
   const total = ref(0)
-  const records = ref<T[]>([])
-  const query = reactive({
-    current: 1,
-    size: 10
-  } as TableQuery)
+  const records = ref<TRecord[]>([])
+  const query = reactive(cloneInitialQuery(initialQuery)) as TQuery
 
-  const load = async () => {
+  const load = async (overrides?: Partial<TQuery>) => {
+    if (overrides) {
+      Object.assign(query, overrides)
+    }
+
     loading.value = true
     try {
-      const res = await fetcher(query)
+      const res = await fetcher({ ...query })
       total.value = res.total
       records.value = res.records
     } finally {
@@ -28,5 +43,27 @@ export function useTable<T extends object>(
     }
   }
 
-  return { loading, total, records, query, load }
+  const handlePage = (page: number) => load({ current: page } as Partial<TQuery>)
+
+  const handleSizeChange = (size: number) =>
+    load({
+      current: 1,
+      size
+    } as Partial<TQuery>)
+
+  const reset = (overrides?: Partial<TQuery>) => {
+    Object.assign(query, cloneInitialQuery(initialQuery), overrides)
+    return load()
+  }
+
+  return {
+    loading,
+    total,
+    records,
+    query,
+    load,
+    reset,
+    handlePage,
+    handleSizeChange
+  }
 }

@@ -195,6 +195,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import type { UploadProps, UploadRequestOptions } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { uploadImageApi } from '@/api/common'
+import { validateImageFile } from '@/utils/upload'
 import {
   auditPostApi,
   batchDeleteCommentsApi,
@@ -266,15 +267,7 @@ const noticeStatusSwitch = computed({
 })
 
 const beforeImageUpload: UploadProps['beforeUpload'] = (rawFile) => {
-  if (!rawFile.type.startsWith('image/')) {
-    ElMessage.warning('仅支持上传图片文件')
-    return false
-  }
-  if (rawFile.size / 1024 / 1024 > 5) {
-    ElMessage.warning('图片大小不能超过 5MB')
-    return false
-  }
-  return true
+  return validateImageFile(rawFile)
 }
 
 async function handleDynamicImageUpload(option: UploadRequestOptions) {

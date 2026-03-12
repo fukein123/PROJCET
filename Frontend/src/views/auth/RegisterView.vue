@@ -4,9 +4,9 @@
       <p class="hero-tag">社区志愿服务平台</p>
       <h1>成为社区志愿者，让每一份善意都能被看见</h1>
       <ul class="hero-list">
-        <li>坚持公益导向，围绕“服务社区、关爱邻里、共建共享”开展志愿行动</li>
-        <li>建立可追溯服务档案，完整记录报名、打卡、反馈与成长轨迹</li>
-        <li>倡导长期参与与互助精神，让志愿服务从“活动”走向“常态”</li>
+        <li>坚持公益导向，围绕“服务社区、关爱邻里、共建共享”开展志愿行动。</li>
+        <li>建立可追溯的服务档案，完整记录报名、打卡、反馈与成长轨迹。</li>
+        <li>倡导长期参与与互助精神，让志愿服务从“活动”走向“常态”。</li>
       </ul>
     </section>
 
@@ -14,7 +14,7 @@
       <el-card class="register-card" shadow="never">
         <header class="card-head">
           <h2>志愿者注册</h2>
-          <p>请按顺序完善账号信息，提交后将跳转到登录页面</p>
+          <p>请按顺序完善账号信息，提交后将跳转到登录页面。</p>
         </header>
 
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="register-form">
@@ -22,23 +22,20 @@
             <el-form-item label="志愿者账号" prop="username">
               <el-input v-model.trim="form.username" placeholder="请输入志愿者账号" />
             </el-form-item>
+
             <el-form-item label="密码" prop="password">
               <el-input
                 v-model="form.password"
                 type="password"
                 show-password
-                placeholder="至少6位，包含字母和数字"
+                placeholder="至少 6 位，包含字母和数字"
               />
             </el-form-item>
 
             <el-form-item label="确认密码" prop="confirmPassword">
-              <el-input
-                v-model="form.confirmPassword"
-                type="password"
-                show-password
-                placeholder="请再次输入密码"
-              />
+              <el-input v-model="form.confirmPassword" type="password" show-password placeholder="请再次输入密码" />
             </el-form-item>
+
             <el-form-item label="志愿者姓名" prop="realName">
               <el-input v-model.trim="form.realName" placeholder="请输入真实姓名" />
             </el-form-item>
@@ -60,6 +57,7 @@
                     </template>
                   </div>
                 </el-upload>
+
                 <div class="avatar-actions">
                   <el-button size="small" :loading="avatarUploading" @click="triggerUpload">选择图片</el-button>
                   <el-button size="small" text @click="clearAvatar">清空头像</el-button>
@@ -71,6 +69,7 @@
             <el-form-item label="联系电话" prop="phone">
               <el-input v-model.trim="form.phone" placeholder="请输入手机号" />
             </el-form-item>
+
             <el-form-item label="邮箱" prop="email">
               <el-input v-model.trim="form.email" placeholder="请输入邮箱地址" />
             </el-form-item>
@@ -101,6 +100,7 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { registerApi } from '@/api/auth'
 import { uploadImageApi } from '@/api/common'
+import { validateImageFile } from '@/utils/upload'
 import { isPhone, isStrongPassword } from '@/utils/validate'
 
 interface RegisterForm {
@@ -138,7 +138,10 @@ const rules: FormRules<RegisterForm> = {
     { required: true, message: '请输入联系电话', trigger: 'blur' },
     {
       validator: (_rule, value: string, callback) => {
-        if (!isPhone(value)) callback(new Error('手机号格式不正确'))
+        if (!isPhone(value)) {
+          callback(new Error('手机号格式不正确'))
+          return
+        }
         callback()
       },
       trigger: 'blur'
@@ -148,7 +151,10 @@ const rules: FormRules<RegisterForm> = {
     { required: true, message: '请输入密码', trigger: 'blur' },
     {
       validator: (_rule, value: string, callback) => {
-        if (!isStrongPassword(value)) callback(new Error('密码至少6位，且需要包含字母和数字'))
+        if (!isStrongPassword(value)) {
+          callback(new Error('密码至少 6 位，且需要包含字母和数字'))
+          return
+        }
         callback()
       },
       trigger: 'blur'
@@ -158,7 +164,10 @@ const rules: FormRules<RegisterForm> = {
     { required: true, message: '请确认密码', trigger: 'blur' },
     {
       validator: (_rule, value: string, callback) => {
-        if (value !== form.password) callback(new Error('两次密码输入不一致'))
+        if (value !== form.password) {
+          callback(new Error('两次密码输入不一致'))
+          return
+        }
         callback()
       },
       trigger: 'blur'
@@ -166,19 +175,7 @@ const rules: FormRules<RegisterForm> = {
   ]
 }
 
-const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
-  const isImage = rawFile.type.startsWith('image/')
-  if (!isImage) {
-    ElMessage.warning('仅支持上传图片文件')
-    return false
-  }
-  const isLt5M = rawFile.size / 1024 / 1024 < 5
-  if (!isLt5M) {
-    ElMessage.warning('图片大小不能超过 5MB')
-    return false
-  }
-  return true
-}
+const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => validateImageFile(rawFile)
 
 function triggerUpload() {
   const trigger = document.querySelector('.avatar-upload input[type=file]') as HTMLInputElement | null
@@ -198,14 +195,17 @@ async function handleAvatarUpload(option: UploadRequestOptions) {
     ElMessage.success('头像上传成功')
     option.onSuccess?.(res)
   } catch (error) {
-    option.onError?.(error as any)
+    option.onError?.(error as never)
   } finally {
     avatarUploading.value = false
   }
 }
 
 async function submitRegister() {
-  if (!formRef.value) return
+  if (!formRef.value) {
+    return
+  }
+
   await formRef.value.validate()
   loading.value = true
   try {

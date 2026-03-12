@@ -1,44 +1,32 @@
 # Skills 安装记录
 
-更新时间：2026-03-11
+更新时间：2026-03-12
 
-## 说明
+## 1. 目标
 
-按你的要求先创建了项目内 `skills/` 目录，并从公开仓库下载可用 skills。  
-`skill-installer` 自带 Python 脚本在当前环境不可执行（缺少 python），已按其失败回退流程改为 GitHub 仓库直接拉取并拷贝。
+项目内 `skills/` 目录现在只保留和当前研发流程直接相关的核心 skill，避免仓库夹带过多第三方内容，降低维护成本和上下文噪声。
 
-## 已安装 skills（项目内）
+## 2. 当前保留的核心 skill
 
-- `frontend-design`（来自 `anthropics/skills`）
-- `remotion-best-practices`（来自 `nad128668/remotion_skills_codex`）
-- `canvas-design`（来自 `anthropics/skills`）
-- `brand-guidelines`（来自 `anthropics/skills`）
-- `webapp-testing`（来自 `anthropics/skills`）
-- `pdf`（来自 `anthropics/skills`）
-- `security-best-practices`（来自 `openai/skills`）
-- `sentry`（来自 `openai/skills`）
+- `frontend-design`
+  - 用途：统一页面视觉方向、提升界面设计质量、避免通用化模板页面。
+- `webapp-testing`
+  - 用途：启动本地服务并用 Playwright 做页面冒烟、交互验证和排错。
+- `pdf`
+  - 用途：当需求文档、交付文档以 PDF 形态流转时，做提取、核对和渲染验证。
 
-## 你给出的推荐名与安装映射
+## 3. 已移除的非核心 skill
 
-- `frontend_desigon` -> `frontend-design`
-- `remotion` -> `remotion-best-practices`
-- `UI UX ProMax` -> `canvas-design` + `brand-guidelines`
-- `Systematic Debugging` -> `webapp-testing`
-- `Error Log Summarizer` -> `sentry`
-- `SQL Injector Shield` -> `security-best-practices`
-- `pdf` -> `pdf`
+- `brand-guidelines`
+- `canvas-design`
+- `remotion-best-practices`
+- `security-best-practices`
+- `sentry`
 
-以下名称在公开仓库中未找到同名 skill，已使用最接近可替代 skill：
+以上 skill 不再随项目仓库分发；如果后续任务确实需要，可在会话环境中按需重新安装。
 
-- `UniversalCodeReviewer`
-- `TeamStyleEnforcer`
-- `Postman x Antigravity`
-- `Git Commit Message Pro`
-- `Dockerfile Optimizer`
+## 4. 调整原则
 
-## 操作提示
-
-如果要让 Codex 会话识别新安装 skills，按 `skill-installer` 说明需要重启会话：
-
-`Restart Codex to pick up new skills.`
-
+- 优先保留和当前项目主链路直接相关的 skill：界面设计、页面验证、文档核对。
+- 能通过全局环境或临时安装补充的 skill，不再长期存放在仓库内。
+- 项目文档只记录当前有效的核心 skill，避免“目录里有但开发中不用”的冗余状态。

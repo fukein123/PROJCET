@@ -39,14 +39,14 @@
               <h3>{{ item.title }}</h3>
               <div class="line">
                 <span>活动状态：</span>
-                <el-tag size="small" :type="statusTag(item.status)">{{ statusLabel(item.status) }}</el-tag>
+                <el-tag size="small" :type="getActivityStatusTag(item.status)">{{ getActivityStatusLabel(item.status) }}</el-tag>
               </div>
               <div class="line">
                 <span>活动时间：</span>
-                <strong>{{ formatTime(item.startTime) }} - {{ formatTime(item.endTime) }}</strong>
+                <strong>{{ formatDateTime(item.startTime) }} - {{ formatDateTime(item.endTime) }}</strong>
               </div>
               <div class="line">
-                <span>活动地址：</span>
+                <span>活动地点：</span>
                 <strong>{{ item.address }}</strong>
               </div>
               <div class="line">
@@ -69,6 +69,7 @@
 
           <div v-if="!activities.length" class="empty">当前筛选条件下暂无活动</div>
         </section>
+
         <div class="pager">
           <el-pagination
             layout="total, prev, pager, next"
@@ -85,7 +86,6 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -98,6 +98,7 @@ import {
 import { createFavoriteApi } from '@/api/content'
 import { usePortalNavigation } from '@/composables/usePortalNavigation'
 import { useUserStore } from '@/stores/userStore'
+import { formatDateTime, getActivityStatusLabel, getActivityStatusTag } from '@/utils/display'
 import PortalNavBar from './PortalNavBar.vue'
 
 const route = useRoute()
@@ -126,24 +127,6 @@ const coverList = [
 
 function coverFor(id: number) {
   return coverList[id % coverList.length]
-}
-
-function formatTime(value: string) {
-  return dayjs(value).format('YYYY-MM-DD HH:mm')
-}
-
-function statusLabel(status: string) {
-  if (status === 'PUBLISHED') return '报名中'
-  if (status === 'ONGOING') return '进行中'
-  if (status === 'ENDED') return '已结束'
-  return status
-}
-
-function statusTag(status: string) {
-  if (status === 'PUBLISHED') return 'success'
-  if (status === 'ONGOING') return 'warning'
-  if (status === 'ENDED') return 'info'
-  return undefined
 }
 
 async function load() {
@@ -206,8 +189,13 @@ async function collect(activityId: number) {
 
 async function handleAutoApply() {
   const applyId = Number(route.query.apply)
-  if (hasAppliedFromQuery.value || !applyId || Number.isNaN(applyId)) return
-  if (!portalNav.isLogin.value) return
+  if (hasAppliedFromQuery.value || !applyId || Number.isNaN(applyId)) {
+    return
+  }
+  if (!portalNav.isLogin.value) {
+    return
+  }
+
   hasAppliedFromQuery.value = true
   await apply(applyId)
   router.replace('/portal/activities')

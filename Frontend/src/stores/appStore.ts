@@ -2,13 +2,11 @@ import { defineStore } from 'pinia'
 
 interface AppState {
   sidebarCollapsed: boolean
-  themeName: string
 }
 
 export const useAppStore = defineStore('app', {
   state: (): AppState => ({
-    sidebarCollapsed: false,
-    themeName: 'civic-light'
+    sidebarCollapsed: false
   }),
   actions: {
     toggleSidebar() {
@@ -16,4 +14,3 @@ export const useAppStore = defineStore('app', {
     }
   }
 })
-
