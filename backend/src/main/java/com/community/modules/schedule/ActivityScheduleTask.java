@@ -21,16 +21,51 @@ public class ActivityScheduleTask {
 
     @Scheduled(cron = "0 0 0 * * ?")
     public void markExpiredActivities() {
-        int updated = activityService.endExpiredActivities();
-        log.info("Scheduled task - marked {} expired activities as ENDED", updated);
+        long startedAt = System.currentTimeMillis();
+        log.info("Scheduled task started, task=markExpiredActivities");
+        try {
+            int updated = activityService.endExpiredActivities();
+            log.info(
+                    "Scheduled task finished, task=markExpiredActivities, updatedRows={}, durationMs={}",
+                    updated,
+                    System.currentTimeMillis() - startedAt
+            );
+        } catch (RuntimeException ex) {
+            log.error(
+                    "Scheduled task failed, task=markExpiredActivities, durationMs={}",
+                    System.currentTimeMillis() - startedAt,
+                    ex
+            );
+            throw ex;
+        }
     }
 
     @Scheduled(cron = "0 0 1 ? * MON")
     public void weeklyVolunteerRankingJob() {
-        LocalDate weekStart = LocalDate.now()
-                .minusWeeks(1)
-                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        int generated = volunteerWeeklyStatsService.rebuildWeeklyStats(weekStart);
-        log.info("Scheduled task - rebuilt weekly volunteer ranking for weekStart={}, rows={}", weekStart, generated);
+        LocalDate requestedWeekStart = LocalDate.now().minusWeeks(1);
+        LocalDate weekStart = requestedWeekStart.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        long startedAt = System.currentTimeMillis();
+        log.info(
+                "Scheduled task started, task=weeklyVolunteerRankingJob, requestedWeekStart={}, normalizedWeekStart={}",
+                requestedWeekStart,
+                weekStart
+        );
+        try {
+            int generated = volunteerWeeklyStatsService.rebuildWeeklyStats(weekStart, "scheduled-cron");
+            log.info(
+                    "Scheduled task finished, task=weeklyVolunteerRankingJob, normalizedWeekStart={}, generatedRows={}, durationMs={}",
+                    weekStart,
+                    generated,
+                    System.currentTimeMillis() - startedAt
+            );
+        } catch (RuntimeException ex) {
+            log.error(
+                    "Scheduled task failed, task=weeklyVolunteerRankingJob, normalizedWeekStart={}, durationMs={}",
+                    weekStart,
+                    System.currentTimeMillis() - startedAt,
+                    ex
+            );
+            throw ex;
+        }
     }
 }

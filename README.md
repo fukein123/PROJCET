@@ -11,9 +11,13 @@
 
 ```text
 zero/
+├─ .approval-workflow/
+├─ .specify/
+├─ .spec-workflow/
 ├─ backend/
 ├─ Frontend/
 ├─ file/
+├─ scripts/
 ├─ skills/
 └─ README.md
 ```
@@ -48,6 +52,16 @@ npm run dev
 
 - 默认端口：`5173`
 
+### 4. 验证链路
+
+```bash
+cd Frontend
+npm run build
+npm run smoke
+```
+
+- `npm run smoke` 默认校验：登录、报名、评论、退出
+
 ## 默认账号
 
 - 管理员：`admin / 123456`
@@ -59,6 +73,8 @@ npm run dev
 - 后端统一返回 `ApiResponse`，分页统一使用 `PageResult`。
 - 结构治理、功能补足和每轮验证记录统一写入 `file/` 目录。
 - 当前本地核心 skill 仅保留 `frontend-design`、`webapp-testing`、`pdf`，其他按需再装。
+- 规格文档统一存放在 `.spec-workflow/specs/`，审批统一通过 `scripts/local-approval.ps1` 写入 `.approval-workflow/`。
+- 本地审批规则：你在聊天里回复 `通过` 或 `需修改：...`，助手更新本地审批记录后再进入下一阶段。
 
 ## 文档索引
 

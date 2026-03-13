@@ -22,8 +22,12 @@ Frontend/.vite/
 Frontend/.cache/
 Frontend/.env.local
 
-# Spec workflow runtime
+# Legacy spec-workflow runtime
 .spec-workflow/approvals/
+
+# Local approval runtime
+.approval-workflow/requests/
+.approval-workflow/archive/
 
 # Misc
 *.tmp

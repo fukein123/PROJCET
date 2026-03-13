@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "test:unit": "vitest run",
     "preview": "vite preview",
-    "smoke": "node scripts/smoke-flow.mjs"
+    "smoke:check": "node --check scripts/smoke-flow.mjs",
+    "smoke": "node scripts/smoke-flow.mjs",
+    "visual:baseline": "node scripts/visual-baseline.mjs",
+    "verify:ui": "npm run build && npm run test:unit && npm run smoke:check && npm run smoke && npm run visual:baseline"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -22,11 +26,14 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
-    "@vitejs/plugin-vue": "^6.0.4",
+    "@vitejs/plugin-vue": "^6.0.5",
+    "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.8.1",
+    "jsdom": "^28.1.0",
     "playwright": "^1.58.2",
     "typescript": "~5.9.3",
-    "vite": "^7.3.1",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0",
     "vue-tsc": "^3.1.5"
   }
 }

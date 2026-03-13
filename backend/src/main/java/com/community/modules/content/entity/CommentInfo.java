@@ -17,6 +17,6 @@ public class CommentInfo extends BaseEntity {
     private Long targetId;
     private Long userId;
     private String content;
+    private String testDataTag;
     private Integer status;
 }
-

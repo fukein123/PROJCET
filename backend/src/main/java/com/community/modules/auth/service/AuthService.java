@@ -20,6 +20,7 @@ public class AuthService {
 
     private static final String DEFAULT_AVATAR =
             "https://cdn.jsdelivr.net/gh/fukexin123/assets/default-avatar.png";
+    private static final String LOGIN_FAILED_MESSAGE = "账号、密码或登录入口错误";
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -30,13 +31,14 @@ public class AuthService {
                 .eq(User::getUsername, request.getUsername())
                 .last("limit 1"));
         if (user == null) {
-            throw new BusinessException("账号或密码错误");
+            throw new BusinessException(LOGIN_FAILED_MESSAGE);
         }
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException("账号或密码错误");
+            throw new BusinessException(LOGIN_FAILED_MESSAGE);
         }
-        if (StrUtil.isNotBlank(request.getRole()) && !StrUtil.equalsIgnoreCase(request.getRole(), user.getRole())) {
-            throw new BusinessException("账号角色不匹配，请选择正确的登录入口");
+        String requestedRole = StrUtil.trim(request.getRole());
+        if (StrUtil.isNotBlank(requestedRole) && !StrUtil.equalsIgnoreCase(requestedRole, user.getRole())) {
+            throw new BusinessException(LOGIN_FAILED_MESSAGE);
         }
         if (user.getStatus() != null && user.getStatus() == 0) {
             throw new BusinessException("账号已被禁用");

@@ -3,9 +3,15 @@ import { getRole, getToken, getUsername, setRole, setToken, setUsername, clearAu
 import { loginApi, type LoginPayload } from '@/api/auth'
 import { getMyProfileApi, type UserModel } from '@/api/user'
 
+type UserRole = 'ADMIN' | 'VOLUNTEER'
+
+function normalizeRole(role: string): UserRole | '' {
+  return role === 'ADMIN' || role === 'VOLUNTEER' ? role : ''
+}
+
 interface UserState {
   token: string
-  role: string
+  role: UserRole | ''
   username: string
   profile: UserModel | null
 }
@@ -13,7 +19,7 @@ interface UserState {
 export const useUserStore = defineStore('user', {
   state: (): UserState => ({
     token: getToken(),
-    role: getRole(),
+    role: normalizeRole(getRole()),
     username: getUsername(),
     profile: null
   }),
@@ -22,8 +28,19 @@ export const useUserStore = defineStore('user', {
     isAdmin: (state) => state.role === 'ADMIN'
   },
   actions: {
+    resetAuthState() {
+      this.token = ''
+      this.role = ''
+      this.username = ''
+      this.profile = null
+    },
     async login(payload: LoginPayload) {
       const res = await loginApi(payload)
+      if (payload.role && payload.role !== res.role) {
+        this.resetAuthState()
+        clearAuthStorage()
+        throw new Error('登录入口与账号角色不匹配')
+      }
       this.token = res.token
       this.role = res.role
       this.username = res.username
@@ -35,12 +52,8 @@ export const useUserStore = defineStore('user', {
       this.profile = await getMyProfileApi()
     },
     logout() {
-      this.token = ''
-      this.role = ''
-      this.username = ''
-      this.profile = null
+      this.resetAuthState()
       clearAuthStorage()
     }
   }
 })
-

@@ -6,13 +6,15 @@ export const DEFAULT_ACTIVITY_COVER =
 const activityStatusTextMap: Record<string, string> = {
   PUBLISHED: '报名中',
   ONGOING: '进行中',
-  ENDED: '已结束'
+  ENDED: '已结束',
+  ARCHIVED: '已归档'
 }
 
 const activityStatusTagMap: Record<string, 'success' | 'warning' | 'info'> = {
   PUBLISHED: 'success',
   ONGOING: 'warning',
-  ENDED: 'info'
+  ENDED: 'info',
+  ARCHIVED: 'info'
 }
 
 const applicationStatusTextMap: Record<string, string> = {
@@ -35,6 +37,25 @@ const checkRecordStatusTextMap: Record<string, string> = {
 const checkRecordStatusTagMap: Record<string, 'warning' | 'success' | 'info'> = {
   SIGNED_IN: 'warning',
   FINISHED: 'success'
+}
+
+const forumPostStatusTextMap: Record<string, string> = {
+  PENDING: '待审核',
+  APPROVED: '已通过',
+  REJECTED: '已拒绝'
+}
+
+const forumPostStatusTagMap: Record<string, 'warning' | 'success' | 'danger' | 'info'> = {
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'danger'
+}
+
+const commentTargetTextMap: Record<string, string> = {
+  POST: '论坛帖子',
+  ACTIVITY: '活动评价',
+  DYNAMIC: '社区动态',
+  NOTICE: '公告评论'
 }
 
 export function formatDateTime(value?: string) {
@@ -66,6 +87,18 @@ export function getCheckRecordStatusLabel(status?: string) {
 
 export function getCheckRecordStatusTag(status?: string) {
   return checkRecordStatusTagMap[status || ''] || 'info'
+}
+
+export function getForumPostStatusLabel(status?: string) {
+  return forumPostStatusTextMap[status || ''] || status || '未知'
+}
+
+export function getForumPostStatusTag(status?: string) {
+  return forumPostStatusTagMap[status || ''] || 'info'
+}
+
+export function getCommentTargetLabel(targetType?: string) {
+  return commentTargetTextMap[targetType || ''] || targetType || '未知'
 }
 
 export function toServiceHours(minutes?: number) {

@@ -1,5 +1,6 @@
 package com.community.common.config;
 
+import com.community.common.exception.ApiErrorCode;
 import com.community.common.web.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -7,15 +8,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -60,9 +56,9 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) ->
-                                writeJson(response, 401, ApiResponse.fail(401, "未登录或登录已失效")))
+                                writeJson(response, ApiErrorCode.UNAUTHORIZED, "未登录或登录已失效"))
                         .accessDeniedHandler((request, response, accessDeniedException) ->
-                                writeJson(response, 403, ApiResponse.fail(403, "无权限访问该资源"))))
+                                writeJson(response, ApiErrorCode.FORBIDDEN, "无权限访问该资源")))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -73,23 +69,10 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService,
-                                                         PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return provider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
-        return configuration.getAuthenticationManager();
-    }
-
-    private void writeJson(jakarta.servlet.http.HttpServletResponse response, int status, ApiResponse<Void> payload)
+    private void writeJson(jakarta.servlet.http.HttpServletResponse response, ApiErrorCode errorCode, String message)
             throws IOException {
-        response.setStatus(status);
+        response.setStatus(errorCode.getHttpStatus().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(objectMapper.writeValueAsString(payload));
+        response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail(errorCode, message)));
     }
 }

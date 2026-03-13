@@ -1,12 +1,12 @@
 #!/usr/bin/env pwsh
 # Create a new feature
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding=$false)]
 param(
     [switch]$Json,
     [string]$ShortName,
     [int]$Number = 0,
     [switch]$Help,
-    [Parameter(ValueFromRemainingArguments = $true)]
+    [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]]$FeatureDescription
 )
 $ErrorActionPreference = 'Stop'
@@ -302,4 +302,3 @@ if ($Json) {
     Write-Output "HAS_GIT: $hasGit"
     Write-Output "SPECIFY_FEATURE environment variable set to: $branchName"
 }
-

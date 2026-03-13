@@ -1,6 +1,11 @@
 <template>
-  <div class="fade-up">
-    <SearchForm @search="load" @reset="resetQuery">
+  <AdminListScaffold
+    title="志愿活动管理"
+    description="统一维护社区志愿活动的基础信息、封面素材与志愿者容量，列表支持分页浏览与批量治理。"
+    @search="load"
+    @reset="resetQuery"
+  >
+    <template #filters>
       <el-form-item label="关键词">
         <el-input v-model="query.keyword" placeholder="活动名称" />
       </el-form-item>
@@ -9,19 +14,30 @@
           <el-option label="已发布" value="PUBLISHED" />
           <el-option label="进行中" value="ONGOING" />
           <el-option label="已结束" value="ENDED" />
+          <el-option label="已归档" value="ARCHIVED" />
         </el-select>
       </el-form-item>
-    </SearchForm>
+    </template>
 
-    <el-card class="module" shadow="never">
-      <template #header>
-        <div class="head">
-          <span>志愿活动管理</span>
-          <div class="head-actions">
-            <el-button type="danger" plain :disabled="!selectedIds.length" @click="batchRemove">批量删除</el-button>
-            <el-button type="primary" @click="openCreate">新增活动</el-button>
-          </div>
-        </div>
+    <AdminContentSection
+      title="活动列表"
+      description="支持查看封面、人数、时间与状态信息，创建、编辑、批量归档、恢复发布与批量删除互不影响列表筛选条件。"
+      :loading="loading && !list.length"
+      :empty="!loading && !list.length"
+      loading-title="正在加载活动列表"
+      loading-description="请稍候，系统正在同步最新的志愿活动数据。"
+      empty-title="当前暂无活动"
+      empty-description="可以先创建一场新的社区志愿活动，创建后会在这里按分页展示。"
+    >
+      <template #actions>
+        <el-button type="warning" plain :disabled="!selectedIds.length" @click="batchArchive">批量归档</el-button>
+        <el-button plain :disabled="!selectedIds.length" @click="batchRestore">恢复发布</el-button>
+        <el-button type="danger" plain :disabled="!selectedIds.length" @click="batchRemove">批量删除</el-button>
+        <el-button type="primary" @click="openCreate">新增活动</el-button>
+      </template>
+
+      <template #emptyActions>
+        <el-button type="primary" @click="openCreate">立即新增活动</el-button>
       </template>
 
       <el-table :data="list" border v-loading="loading" @selection-change="handleSelectionChange">
@@ -54,7 +70,7 @@
         </el-table-column>
       </el-table>
 
-      <div class="footer">
+      <template #pagination>
         <el-pagination
           layout="total, sizes, prev, pager, next"
           :current-page="query.current"
@@ -64,15 +80,16 @@
           @current-change="handlePage"
           @size-change="handleSizeChange"
         />
-      </div>
-    </el-card>
+      </template>
+    </AdminContentSection>
 
-    <el-drawer
+    <el-dialog
       v-model="drawerVisible"
       :title="editingId ? '编辑活动' : '新增活动'"
-      size="min(92vw, 920px)"
+      width="min(92vw, 920px)"
+      top="5vh"
       append-to-body
-      class="activity-drawer"
+      class="activity-dialog"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="drawer-form">
         <div class="form-grid">
@@ -91,6 +108,7 @@
               <el-option label="已发布" value="PUBLISHED" />
               <el-option label="进行中" value="ONGOING" />
               <el-option label="已结束" value="ENDED" />
+              <el-option label="已归档" value="ARCHIVED" />
             </el-select>
           </el-form-item>
 
@@ -167,18 +185,21 @@
         <el-button @click="drawerVisible = false">取消</el-button>
         <el-button type="primary" @click="submit">保存</el-button>
       </template>
-    </el-drawer>
-  </div>
+    </el-dialog>
+  </AdminListScaffold>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import type { FormInstance, FormRules, UploadProps, UploadRequestOptions } from 'element-plus'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import SearchForm from '@/components/SearchForm.vue'
+import { ElMessage } from 'element-plus'
+import AdminContentSection from '@/components/admin/AdminContentSection.vue'
+import AdminListScaffold from '@/components/admin/AdminListScaffold.vue'
 import { uploadImageApi } from '@/api/common'
 import {
+  batchArchiveActivitiesApi,
   batchDeleteActivitiesApi,
+  batchRestoreActivitiesApi,
   createActivityApi,
   deleteActivityApi,
   listCategoriesApi,
@@ -187,6 +208,7 @@ import {
   type ActivityCategory,
   type ActivityModel
 } from '@/api/activity'
+import { useSelectionIds } from '@/composables/useSelectionIds'
 import { useTable } from '@/composables/useTable'
 import {
   DEFAULT_ACTIVITY_COVER,
@@ -194,6 +216,7 @@ import {
   getActivityStatusLabel,
   getActivityStatusTag
 } from '@/utils/display'
+import { runConfirmedAction } from '@/utils/confirmed-action'
 import { validateImageFile } from '@/utils/upload'
 
 interface ActivityQuery {
@@ -203,16 +226,10 @@ interface ActivityQuery {
   status: string
 }
 
-const {
-  loading,
-  records: list,
-  total,
-  query,
-  load,
-  reset,
-  handlePage,
-  handleSizeChange
-} = useTable<ActivityModel, ActivityQuery>({
+const { loading, records: list, total, query, load, reset, handlePage, handleSizeChange } = useTable<
+  ActivityModel,
+  ActivityQuery
+>({
   initialQuery: {
     current: 1,
     size: 10,
@@ -224,11 +241,12 @@ const {
       current: params.current,
       size: params.size,
       keyword: params.keyword || undefined,
-      status: params.status || undefined
+      status: params.status || undefined,
+      includeArchived: true
     })
 })
 
-const selectedIds = ref<number[]>([])
+const { selectedIds, handleSelectionChange, clearSelection } = useSelectionIds<ActivityModel>()
 const drawerVisible = ref(false)
 const editingId = ref<number>()
 const categories = ref<ActivityCategory[]>([])
@@ -269,10 +287,6 @@ function syncRangeToTime(value: [string, string] | null) {
 
   form.startTime = value[0]
   form.endTime = value[1]
-}
-
-function handleSelectionChange(rows: ActivityModel[]) {
-  selectedIds.value = rows.map((row) => row.id)
 }
 
 const beforeCoverUpload: UploadProps['beforeUpload'] = (rawFile) => validateImageFile(rawFile)
@@ -347,12 +361,13 @@ async function submit() {
 }
 
 async function removeOne(id: number) {
-  await ElMessageBox.confirm('删除后将同步清理报名、打卡与收藏记录，确认继续？', '删除活动', {
-    type: 'warning'
+  await runConfirmedAction({
+    message: '删除后将同步清理报名、打卡与收藏记录，确认继续？',
+    title: '删除活动',
+    action: () => deleteActivityApi(id),
+    successMessage: '活动已删除',
+    afterSuccess: load
   })
-  await deleteActivityApi(id)
-  ElMessage.success('活动已删除')
-  await load()
 }
 
 async function batchRemove() {
@@ -360,13 +375,51 @@ async function batchRemove() {
     return
   }
 
-  await ElMessageBox.confirm(`确认批量删除 ${selectedIds.value.length} 个活动？`, '批量删除活动', {
-    type: 'warning'
+  await runConfirmedAction({
+    message: `确认批量删除 ${selectedIds.value.length} 个活动？`,
+    title: '批量删除活动',
+    action: () => batchDeleteActivitiesApi(selectedIds.value),
+    successMessage: '批量删除成功',
+    afterSuccess: async () => {
+      clearSelection()
+      await load()
+    }
   })
-  await batchDeleteActivitiesApi(selectedIds.value)
-  selectedIds.value = []
-  ElMessage.success('批量删除成功')
-  await load()
+}
+
+async function batchArchive() {
+  if (!selectedIds.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认批量归档 ${selectedIds.value.length} 个活动？归档后志愿者侧不再展示。`,
+    title: '批量归档活动',
+    type: 'warning',
+    action: () => batchArchiveActivitiesApi(selectedIds.value),
+    successMessage: '批量归档成功',
+    afterSuccess: async () => {
+      clearSelection()
+      await load()
+    }
+  })
+}
+
+async function batchRestore() {
+  if (!selectedIds.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认将选中的 ${selectedIds.value.length} 个活动恢复为已发布状态？`,
+    title: '恢复发布活动',
+    action: () => batchRestoreActivitiesApi(selectedIds.value),
+    successMessage: '批量恢复成功',
+    afterSuccess: async () => {
+      clearSelection()
+      await load()
+    }
+  })
 }
 
 onMounted(async () => {
@@ -376,28 +429,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.module {
-  border: 1px solid var(--cvs-border);
-  border-radius: 16px;
-}
-
-.head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.head-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.footer {
-  margin-top: 12px;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .cover-mini {
   width: 62px;
   height: 42px;
@@ -441,8 +472,9 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
-:deep(.activity-drawer .el-drawer__body) {
+:deep(.activity-dialog .el-dialog__body) {
   overflow: auto;
+  max-height: calc(100vh - 240px);
 }
 
 @media (max-width: 900px) {

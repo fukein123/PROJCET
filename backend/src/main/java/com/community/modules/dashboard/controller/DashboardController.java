@@ -46,7 +46,7 @@ public class DashboardController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> rebuildWeeklyRanking(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        int generated = volunteerWeeklyStatsService.rebuildWeeklyStats(weekStart);
+        int generated = volunteerWeeklyStatsService.rebuildWeeklyStats(weekStart, "manual-api");
         return ApiResponse.success("rebuild success, rows=" + generated, null);
     }
 }

@@ -1,5 +1,6 @@
 package com.community.common.web;
 
+import com.community.common.exception.ApiErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -31,5 +32,8 @@ public class ApiResponse<T> {
     public static <T> ApiResponse<T> fail(Integer code, String message) {
         return new ApiResponse<>(code, message, null);
     }
-}
 
+    public static <T> ApiResponse<T> fail(ApiErrorCode errorCode, String message) {
+        return new ApiResponse<>(errorCode.getCode(), message, null);
+    }
+}

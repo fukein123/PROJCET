@@ -4,6 +4,7 @@
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Approval Gate**: After each Requirements, Design, or Tasks artifact is drafted, create a local approval record with `scripts/local-approval.ps1` and wait for the user's chat reply (`通过` or `需修改：...`) before entering the next phase.
 
 ## Summary
 
@@ -31,7 +32,13 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Frontend-backend separation is preserved with clear module/runtime boundaries
+- Technology choices use latest stable releases, or include explicit compatibility rationale
+- Skill-first strategy is defined, and any new skill installation is minimal and justified
+- TDD sequence is explicit: tests first (failing), implementation second, refactor third
+- Test standards and UX consistency checks are defined for priority user flows
+- Spec workflow phase gates and local chat approvals via `scripts/local-approval.ps1` are respected (no phase skipping)
+- Quality/security/observability expectations are included in plan outputs
 
 ## Project Structure
 

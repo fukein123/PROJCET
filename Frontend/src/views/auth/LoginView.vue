@@ -137,7 +137,7 @@ async function submitLogin() {
     if (userStore.role === 'ADMIN') {
       router.push('/admin/dashboard')
     } else {
-      router.push('/volunteer/home')
+      router.push('/portal')
     }
   } catch (error: any) {
     const message = String(error?.message || '')

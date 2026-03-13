@@ -79,6 +79,7 @@ export function pageActivitiesApi(params: {
   keyword?: string
   categoryId?: number
   status?: string
+  includeArchived?: boolean
 }) {
   return request.get<never, PageResult<ActivityModel>>('/api/activity/page', { params })
 }
@@ -101,6 +102,14 @@ export function deleteActivityApi(id: number) {
 
 export function batchDeleteActivitiesApi(ids: number[]) {
   return request.post('/api/activity/batch-delete', { ids })
+}
+
+export function batchArchiveActivitiesApi(ids: number[]) {
+  return request.post('/api/activity/batch-archive', { ids })
+}
+
+export function batchRestoreActivitiesApi(ids: number[]) {
+  return request.post('/api/activity/batch-restore', { ids })
 }
 
 export function applyActivityApi(activityId: number) {

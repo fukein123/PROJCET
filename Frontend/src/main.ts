@@ -38,7 +38,8 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import { createPinia } from 'pinia'
-import '@/assets/styles/theme.css'
+// Load project tokens and Element Plus overrides after the library defaults.
+import '@/assets/styles/index.css'
 
 const app = createApp(App)
 const elementComponents = [

@@ -1,6 +1,7 @@
 package com.community.modules.content.controller;
 
 import com.community.common.dto.IdListRequest;
+import com.community.common.exception.BusinessException;
 import com.community.common.web.ApiResponse;
 import com.community.common.web.PageResult;
 import com.community.modules.content.dto.FavoriteRequest;
@@ -17,6 +18,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,6 +40,8 @@ import java.util.Map;
 @RequestMapping("/api/content")
 @RequiredArgsConstructor
 public class ContentController {
+
+    private static final String TEST_DATA_MARKER_HEADER = "X-Test-Data-Marker";
 
     private final ContentService contentService;
 
@@ -91,6 +98,22 @@ public class ContentController {
         return ApiResponse.success("batch deleted", null);
     }
 
+    @Operation(summary = "Admin - batch archive dynamics")
+    @PostMapping("/dynamics/batch-archive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchArchiveDynamics(@Valid @RequestBody IdListRequest request) {
+        contentService.batchArchiveDynamics(request.getIds());
+        return ApiResponse.success("batch archived", null);
+    }
+
+    @Operation(summary = "Admin - batch restore dynamics")
+    @PostMapping("/dynamics/batch-restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchRestoreDynamics(@Valid @RequestBody IdListRequest request) {
+        contentService.batchRestoreDynamics(request.getIds());
+        return ApiResponse.success("batch restored", null);
+    }
+
     @Operation(summary = "Page notices")
     @GetMapping("/notices/page")
     public ApiResponse<PageResult<NoticeInfo>> pageNotices(@RequestParam(defaultValue = "1") long current,
@@ -129,6 +152,22 @@ public class ContentController {
     public ApiResponse<Void> batchDeleteNotices(@Valid @RequestBody IdListRequest request) {
         contentService.batchDeleteNotices(request.getIds());
         return ApiResponse.success("batch deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch archive notices")
+    @PostMapping("/notices/batch-archive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchArchiveNotices(@Valid @RequestBody IdListRequest request) {
+        contentService.batchArchiveNotices(request.getIds());
+        return ApiResponse.success("batch archived", null);
+    }
+
+    @Operation(summary = "Admin - batch restore notices")
+    @PostMapping("/notices/batch-restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchRestoreNotices(@Valid @RequestBody IdListRequest request) {
+        contentService.batchRestoreNotices(request.getIds());
+        return ApiResponse.success("batch restored", null);
     }
 
     @Operation(summary = "List active banners")
@@ -255,7 +294,9 @@ public class ContentController {
     @Operation(summary = "Create comment")
     @PostMapping("/comments")
     @PreAuthorize("hasAnyRole('ADMIN','VOLUNTEER')")
-    public ApiResponse<Void> addComment(@RequestBody CommentInfo comment) {
+    public ApiResponse<Void> addComment(@RequestBody CommentInfo comment,
+                                        @RequestHeader(value = TEST_DATA_MARKER_HEADER, required = false) String testDataMarker) {
+        comment.setTestDataTag(normalizeTestDataMarker(testDataMarker));
         contentService.addComment(comment);
         return ApiResponse.success("created", null);
     }
@@ -266,8 +307,25 @@ public class ContentController {
                                                              @RequestParam(defaultValue = "10") long size,
                                                              @RequestParam(defaultValue = "false") boolean onlyMine,
                                                              @RequestParam(required = false) String targetType,
-                                                             @RequestParam(required = false) Long targetId) {
-        return ApiResponse.success(contentService.pageComments(current, size, onlyMine, targetType, targetId));
+                                                             @RequestParam(required = false) Long targetId,
+                                                             @RequestParam(defaultValue = "false") boolean includeTestData,
+                                                             Authentication authentication) {
+        if (targetId != null && !StringUtils.hasText(targetType)) {
+            throw new BusinessException(400, "按目标ID筛选评论时必须同时提供目标类型");
+        }
+        if (onlyMine && (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken)) {
+            throw new BusinessException(401, "查询我的评论前请先登录");
+        }
+        return ApiResponse.success(contentService.pageComments(
+                current,
+                size,
+                onlyMine,
+                targetType,
+                targetId,
+                includeTestData && isAdmin(authentication)
+        ));
     }
 
     @Operation(summary = "Admin - delete comment")
@@ -284,6 +342,22 @@ public class ContentController {
     public ApiResponse<Void> batchDeleteComments(@Valid @RequestBody IdListRequest request) {
         contentService.batchDeleteComments(request.getIds());
         return ApiResponse.success("batch deleted", null);
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)
+                && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    }
+
+    private String normalizeTestDataMarker(String testDataMarker) {
+        String marker = StringUtils.trimWhitespace(testDataMarker);
+        if (!StringUtils.hasText(marker)) {
+            return null;
+        }
+        return marker.length() > 64 ? marker.substring(0, 64) : marker;
     }
 
     @Operation(summary = "My favorite activities")

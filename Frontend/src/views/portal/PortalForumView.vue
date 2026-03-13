@@ -2,7 +2,27 @@
   <div>
     <PortalNavBar />
     <main class="portal-wrap">
-      <el-card class="module" shadow="never">
+      <WorkspaceHero
+        tone="portal"
+        compact
+        eyebrow="社区论坛"
+        title="围绕志愿服务主题发布帖子、参与评论与沉淀社区经验"
+        description="统一展示社区话题、分类筛选、评论入口和发帖流转，保持门户端与志愿者工作台一致的内容层级。"
+      >
+        <template #actions>
+          <el-button type="primary" @click="toPublish">我要发帖</el-button>
+          <el-button @click="router.push('/portal/activities')">查看活动</el-button>
+        </template>
+      </WorkspaceHero>
+
+      <section class="module-card fade-up">
+        <div class="module-head">
+          <div>
+            <p class="module-eyebrow">话题列表</p>
+            <h2 class="section-title">论坛帖子</h2>
+          </div>
+        </div>
+
         <section class="toolbar">
           <div class="category-list">
             <button
@@ -26,14 +46,21 @@
           </div>
 
           <div class="query-panel">
-            <el-input v-model.trim="keyword" placeholder="请输入帖子名称查询" clearable @keyup.enter="loadPosts" />
+            <el-input v-model.trim="keyword" placeholder="请输入帖子标题查询" clearable @keyup.enter="loadPosts" />
             <el-button type="primary" @click="loadPosts">查询</el-button>
             <el-button @click="reset">重置</el-button>
             <el-button type="danger" plain @click="toPublish">我要发帖</el-button>
           </div>
         </section>
 
-        <section class="post-list">
+        <StatePanel
+          v-if="loading"
+          state="loading"
+          tone="portal"
+          title="正在加载帖子"
+          description="正在同步社区居民与志愿者发布的论坛内容。"
+        />
+        <section v-else-if="filteredPosts.length" class="post-list">
           <article
             v-for="(post, index) in filteredPosts"
             :id="`post-${post.id}`"
@@ -45,7 +72,7 @@
 
             <div class="post-main">
               <h3>{{ post.title }}</h3>
-              <p>{{ post.content }}</p>
+              <p>{{ post.content || '当前帖子暂无正文摘要。' }}</p>
               <div class="post-meta">
                 <span>{{ authorLabel(post.userId) }}</span>
                 <span>{{ categoryLabel(post.categoryId) }}</span>
@@ -71,10 +98,14 @@
               </div>
             </div>
           </article>
-
-          <div v-if="!filteredPosts.length" class="empty">当前筛选条件下暂无帖子</div>
         </section>
-      </el-card>
+        <StatePanel
+          v-else
+          tone="portal"
+          title="暂无匹配帖子"
+          description="可以调整筛选条件，或者登录后发布新的社区帖子。"
+        />
+      </section>
     </main>
   </div>
 </template>
@@ -93,11 +124,14 @@ import {
   type ForumCategoryModel,
   type PostModel
 } from '@/api/content'
+import StatePanel from '@/components/shared/StatePanel.vue'
+import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
 import { usePortalNavigation } from '@/composables/usePortalNavigation'
 import PortalNavBar from './PortalNavBar.vue'
 
 const router = useRouter()
 const portalNav = usePortalNavigation()
+const loading = ref(false)
 const posts = ref<PostModel[]>([])
 const comments = ref<CommentModel[]>([])
 const commentDraft = reactive<Record<number, string>>({})
@@ -115,10 +149,23 @@ const coverList = [
 
 const filteredPosts = computed(() =>
   posts.value.filter((item) => {
-    if (selectedCategoryId.value && item.categoryId !== selectedCategoryId.value) return false
+    if (selectedCategoryId.value && item.categoryId !== selectedCategoryId.value) {
+      return false
+    }
+
     return true
   })
 )
+
+const commentsMap = computed(() => {
+  const map: Record<number, CommentModel[]> = {}
+  comments.value.forEach((item) => {
+    const bucket = map[item.targetId] ?? []
+    bucket.push(item)
+    map[item.targetId] = bucket
+  })
+  return map
+})
 
 function coverFor(id: number) {
   return coverList[id % coverList.length]
@@ -139,13 +186,18 @@ function categoryLabel(categoryId: number) {
 }
 
 async function loadPosts() {
-  const res = await pageForumPostsApi({
-    current: 1,
-    size: 30,
-    keyword: keyword.value || undefined,
-    onlyApproved: true
-  })
-  posts.value = res.records
+  loading.value = true
+  try {
+    const res = await pageForumPostsApi({
+      current: 1,
+      size: 30,
+      keyword: keyword.value || undefined,
+      onlyApproved: true
+    })
+    posts.value = res.records
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadComments() {
@@ -166,7 +218,7 @@ async function loadCategories() {
 }
 
 function commentsByPostId(postId: number) {
-  return comments.value.filter((item) => item.targetId === postId)
+  return commentsMap.value[postId] || []
 }
 
 function changeCategory(categoryId: number | undefined) {
@@ -180,13 +232,16 @@ function reset() {
 }
 
 function toPublish() {
-  portalNav.requireLogin(async () => {
-    if (portalNav.roleLabel.value === '管理员') {
-      router.push('/admin/content-manage')
-      return
-    }
-    router.push('/volunteer/my-posts')
-  }, '/portal/forum')
+  portalNav.requireLogin(
+    async () => {
+      if (portalNav.roleLabel.value === '管理员') {
+        router.push('/admin/content-manage')
+        return
+      }
+      router.push('/volunteer/my-posts')
+    },
+    '/portal/forum'
+  )
 }
 
 async function submitComment(postId: number) {
@@ -224,11 +279,32 @@ onMounted(async () => {
 .portal-wrap {
   width: min(1220px, calc(100% - 24px));
   margin: 14px auto 40px;
+  display: grid;
+  gap: 14px;
 }
 
-.module {
-  border-radius: 16px;
+.module-card {
   border: 1px solid var(--cvs-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 18px;
+  box-shadow: var(--cvs-shadow-soft);
+}
+
+.module-head {
+  margin-bottom: 14px;
+}
+
+.module-eyebrow {
+  margin: 0 0 6px;
+  color: #2a7a5f;
+  font-size: var(--cvs-font-size-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.module-head :deep(.section-title) {
+  margin-bottom: 0;
 }
 
 .toolbar {
@@ -244,21 +320,21 @@ onMounted(async () => {
 }
 
 .chip {
-  border: 1px solid #c93154;
-  border-radius: 9px;
-  background: #fff;
-  color: #b1163f;
-  font-weight: 700;
+  border: 1px solid rgba(31, 122, 84, 0.28);
+  border-radius: 10px;
+  background: rgba(228, 241, 234, 0.58);
+  color: #18583c;
+  font-weight: var(--cvs-font-weight-bold);
   padding: 7px 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--cvs-motion-fast) var(--cvs-ease-standard);
 }
 
 .chip.active,
 .chip:hover {
-  color: #fff;
-  background: linear-gradient(120deg, #d91f4c, #f23d64);
-  border-color: #d91f4c;
+  color: #ffffff;
+  background: linear-gradient(120deg, #1b6544, #2f8a66);
+  border-color: #1b6544;
 }
 
 .query-panel {
@@ -274,7 +350,7 @@ onMounted(async () => {
 
 .post-card {
   border: 1px solid var(--cvs-border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
   display: grid;
   grid-template-columns: 200px 1fr;
@@ -365,15 +441,6 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
-}
-
-.empty {
-  border: 1px dashed #d9dee2;
-  border-radius: 12px;
-  min-height: 120px;
-  display: grid;
-  place-items: center;
-  color: #75817c;
 }
 
 @media (max-width: 960px) {

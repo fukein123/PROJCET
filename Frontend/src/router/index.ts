@@ -1,5 +1,5 @@
 ﻿import { createRouter, createWebHistory } from 'vue-router'
-import { getRole, getToken } from '@/utils/auth'
+import { clearAuthStorage, getRole, getToken } from '@/utils/auth'
 import { privateRoutes, publicRoutes } from './routes'
 
 const router = createRouter({
@@ -7,15 +7,30 @@ const router = createRouter({
   routes: [...publicRoutes, ...privateRoutes]
 })
 
+function roleHomePath(role: string) {
+  if (role === 'ADMIN') return '/admin/dashboard'
+  if (role === 'VOLUNTEER') return '/portal'
+  return '/login'
+}
+
 router.beforeEach((to) => {
   const token = getToken()
   const role = getRole()
+  const isValidRole = role === 'ADMIN' || role === 'VOLUNTEER'
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
   const requiredRoles = to.meta.roles as string[] | undefined
 
+  if (token && !isValidRole) {
+    clearAuthStorage()
+    return `/login?redirect=${encodeURIComponent(to.fullPath)}`
+  }
+
+  if (token && role === 'ADMIN' && to.path.startsWith('/portal')) {
+    return '/admin/dashboard'
+  }
+
   if ((to.path === '/login' || to.path === '/register') && token) {
-    if (role === 'ADMIN') return '/admin/dashboard'
-    if (role === 'VOLUNTEER') return '/volunteer/home'
+    return roleHomePath(role)
   }
 
   if (requiresAuth && !token) {
@@ -23,9 +38,7 @@ router.beforeEach((to) => {
   }
 
   if (requiredRoles && requiredRoles.length && !requiredRoles.includes(role)) {
-    if (role === 'ADMIN') return '/admin/dashboard'
-    if (role === 'VOLUNTEER') return '/volunteer/home'
-    return '/login'
+    return roleHomePath(role)
   }
 
   return true

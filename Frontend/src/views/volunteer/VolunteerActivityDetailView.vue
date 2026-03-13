@@ -1,41 +1,85 @@
 <template>
-  <div class="fade-up" v-loading="loading">
-    <el-card class="module" shadow="never">
-      <template #header>
-        <div class="head">
-          <span>活动详情</span>
-          <el-button text @click="router.back()">返回活动中心</el-button>
+  <div class="activity-detail fade-up">
+    <WorkspaceHero
+      compact
+      eyebrow="活动详情"
+      :title="activity?.title || '查看社区志愿活动详情'"
+      :description="activity?.content || '统一查看活动说明、评价与报名入口，保持与门户端一致的信息层级。'"
+    >
+      <template #actions>
+        <el-button type="success" :disabled="!activity || loading" @click="apply">报名活动</el-button>
+        <el-button type="warning" plain :disabled="!activity || loading" @click="collect">收藏活动</el-button>
+        <el-button @click="router.back()">返回活动中心</el-button>
+      </template>
+      <template #aside>
+        <div v-if="activity" class="hero-stat-grid">
+          <article class="hero-stat">
+            <h3>活动状态</h3>
+            <strong>{{ getActivityStatusLabel(activity.status) }}</strong>
+            <span>报名与服务安排以当前状态为准</span>
+          </article>
+          <article class="hero-stat">
+            <h3>志愿者人数</h3>
+            <strong>{{ activity.volunteerQuota }}</strong>
+            <span>当前活动设置的志愿者参与容量</span>
+          </article>
+          <article class="hero-stat">
+            <h3>目标人数</h3>
+            <strong>{{ activity.targetCount }}</strong>
+            <span>活动整体服务对象或预期参与规模</span>
+          </article>
         </div>
       </template>
+    </WorkspaceHero>
 
-      <div v-if="activity" class="detail-layout">
-        <img class="cover" :src="activity.coverImage || DEFAULT_ACTIVITY_COVER" alt="活动封面" />
-        <div class="meta">
-          <h2>{{ activity.title }}</h2>
-          <p class="line"><span>活动内容：</span>{{ activity.content }}</p>
-          <p class="line"><span>活动地点：</span>{{ activity.address }}</p>
-          <p class="line"><span>活动时间：</span>{{ formatDateTime(activity.startTime) }} - {{ formatDateTime(activity.endTime) }}</p>
-          <p class="line"><span>志愿者人数：</span>{{ activity.volunteerQuota }}</p>
-          <p class="line"><span>目标人数：</span>{{ activity.targetCount }}</p>
-          <p class="line"><span>活动状态：</span>{{ getActivityStatusLabel(activity.status) }}</p>
-          <div class="actions">
-            <el-button type="success" @click="apply">报名活动</el-button>
-            <el-button type="warning" plain @click="collect">收藏活动</el-button>
+    <StatePanel
+      v-if="loading"
+      state="loading"
+      title="正在加载活动详情"
+      description="正在同步活动信息、详细说明与评价数据。"
+    />
+
+    <template v-else-if="activity">
+      <section class="module-card">
+        <div class="module-head">
+          <div>
+            <p class="module-eyebrow">基础信息</p>
+            <h2 class="section-title">活动概览</h2>
           </div>
         </div>
-      </div>
 
-      <el-divider />
-
-      <section class="section">
-        <h3>活动详细说明</h3>
-        <p class="description">{{ activity?.description || '暂无详细说明' }}</p>
+        <div class="detail-layout">
+          <img class="cover" :src="activity.coverImage || DEFAULT_ACTIVITY_COVER" alt="活动封面" />
+          <div class="meta">
+            <h3>{{ activity.title }}</h3>
+            <p class="line"><span>活动内容：</span>{{ activity.content }}</p>
+            <p class="line"><span>活动地点：</span>{{ activity.address }}</p>
+            <p class="line"><span>活动时间：</span>{{ formatDateTime(activity.startTime) }} - {{ formatDateTime(activity.endTime) }}</p>
+            <p class="line"><span>志愿者人数：</span>{{ activity.volunteerQuota }}</p>
+            <p class="line"><span>目标人数：</span>{{ activity.targetCount }}</p>
+            <p class="line"><span>活动状态：</span>{{ getActivityStatusLabel(activity.status) }}</p>
+          </div>
+        </div>
       </section>
 
-      <el-divider />
+      <section class="module-card">
+        <div class="module-head">
+          <div>
+            <p class="module-eyebrow">详细说明</p>
+            <h2 class="section-title">活动说明</h2>
+          </div>
+        </div>
+        <p class="description">{{ activity.description || '暂无详细说明' }}</p>
+      </section>
 
-      <section class="section">
-        <h3>活动评价</h3>
+      <section class="module-card">
+        <div class="module-head">
+          <div>
+            <p class="module-eyebrow">活动评价</p>
+            <h2 class="section-title">参与反馈</h2>
+          </div>
+        </div>
+
         <div class="comment-create">
           <el-input v-model="commentText" type="textarea" :rows="3" placeholder="欢迎填写你的活动评价与建议" />
           <div class="comment-actions">
@@ -43,13 +87,16 @@
           </div>
         </div>
 
-        <el-table :data="comments" border>
+        <el-table :data="comments" border empty-text="">
+          <template #empty>
+            <StatePanel compact title="暂无评价" description="参与活动后欢迎留下你的反馈。" />
+          </template>
           <el-table-column prop="id" label="评论 ID" width="90" />
           <el-table-column prop="userId" label="用户 ID" width="90" />
           <el-table-column prop="content" label="评价内容" min-width="420" />
         </el-table>
 
-        <div class="footer">
+        <div v-if="commentTotal > 0" class="footer">
           <el-pagination
             layout="total, prev, pager, next"
             :current-page="commentQuery.current"
@@ -59,7 +106,17 @@
           />
         </div>
       </section>
-    </el-card>
+    </template>
+
+    <StatePanel
+      v-else
+      title="活动不存在或已下线"
+      description="可以返回活动中心查看其他社区志愿活动。"
+    >
+      <template #actions>
+        <el-button type="primary" @click="router.push('/volunteer/activity-center')">返回活动中心</el-button>
+      </template>
+    </StatePanel>
   </div>
 </template>
 
@@ -69,6 +126,9 @@ import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { activityDetailApi, applyActivityApi, type ActivityModel } from '@/api/activity'
 import { addCommentApi, createFavoriteApi, pageCommentsApi, type CommentModel } from '@/api/content'
+import StatePanel from '@/components/shared/StatePanel.vue'
+import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
+import { runConfirmedAction } from '@/utils/confirmed-action'
 import { DEFAULT_ACTIVITY_COVER, formatDateTime, getActivityStatusLabel } from '@/utils/display'
 
 const route = useRoute()
@@ -106,13 +166,25 @@ function handleCommentPage(page: number) {
 }
 
 async function apply() {
-  await applyActivityApi(activityId)
-  ElMessage.success('报名申请已提交，请等待审核')
+  await runConfirmedAction({
+    message: '确认提交该活动的报名申请吗？',
+    title: '报名活动',
+    type: 'info',
+    confirmButtonText: '确认报名',
+    action: () => applyActivityApi(activityId),
+    successMessage: '报名申请已提交，请等待审核'
+  })
 }
 
 async function collect() {
-  await createFavoriteApi({ activityId })
-  ElMessage.success('已加入收藏')
+  await runConfirmedAction({
+    message: '确认将该活动加入收藏吗？',
+    title: '加入收藏',
+    type: 'info',
+    confirmButtonText: '确认收藏',
+    action: () => createFavoriteApi({ activityId }),
+    successMessage: '已加入收藏'
+  })
 }
 
 async function submitComment() {
@@ -144,15 +216,33 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.module {
-  border: 1px solid var(--cvs-border);
-  border-radius: 16px;
+.activity-detail {
+  display: grid;
+  gap: 14px;
 }
 
-.head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.module-card {
+  border: 1px solid var(--cvs-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 18px;
+  box-shadow: var(--cvs-shadow-soft);
+}
+
+.module-head {
+  margin-bottom: 14px;
+}
+
+.module-eyebrow {
+  margin: 0 0 6px;
+  color: #1f7a54;
+  font-size: var(--cvs-font-size-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.module-head :deep(.section-title) {
+  margin-bottom: 0;
 }
 
 .detail-layout {
@@ -169,8 +259,9 @@ onMounted(async () => {
   border: 1px solid var(--cvs-border);
 }
 
-.meta h2 {
+.meta h3 {
   margin: 0 0 10px;
+  font-size: 24px;
 }
 
 .line {
@@ -181,17 +272,6 @@ onMounted(async () => {
 
 .line span {
   color: #5f6c67;
-}
-
-.actions {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.section h3 {
-  margin: 0 0 10px;
 }
 
 .description {

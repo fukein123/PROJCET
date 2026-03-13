@@ -1,9 +1,22 @@
-﻿<template>
+<template>
   <div>
     <PortalNavBar />
     <main class="portal-wrap">
-      <section class="layout">
-        <el-card class="module main" shadow="never">
+      <WorkspaceHero
+        tone="portal"
+        compact
+        eyebrow="信息动态"
+        title="统一查看社区新闻与活动动态"
+        description="按类型和关键词筛选门户资讯，保持与志愿者端一致的信息层级、内容卡片与空态表达。"
+      >
+        <template #actions>
+          <el-button type="primary" @click="load">刷新动态</el-button>
+          <el-button @click="query.type = ''; load()">查看全部</el-button>
+        </template>
+      </WorkspaceHero>
+
+      <section class="layout fade-up">
+        <section class="module-card main">
           <div class="toolbar">
             <el-select v-model="query.type" clearable placeholder="全部类型" style="width: 130px">
               <el-option label="社区新闻" value="NEWS" />
@@ -13,7 +26,14 @@
             <el-button type="primary" @click="load">查询</el-button>
           </div>
 
-          <div class="news-list">
+          <StatePanel
+            v-if="loading"
+            state="loading"
+            tone="portal"
+            title="正在加载动态"
+            description="正在同步社区新闻与活动动态。"
+          />
+          <div v-else-if="list.length" class="news-list">
             <article v-for="item in list" :key="item.id" class="news-item">
               <div class="thumb" :style="{ backgroundImage: `url(${item.imageUrl || fallbackImage(item.id)})` }"></div>
               <div class="content">
@@ -26,10 +46,15 @@
                 </div>
               </div>
             </article>
-            <el-empty v-if="!list.length" description="暂无动态信息" />
           </div>
+          <StatePanel
+            v-else
+            tone="portal"
+            title="暂无动态信息"
+            description="可以调整筛选条件，或等待管理员发布新的新闻动态。"
+          />
 
-          <div class="footer">
+          <div v-if="!loading && total > 0" class="footer">
             <el-pagination
               layout="total, prev, pager, next"
               :current-page="query.current"
@@ -38,17 +63,37 @@
               @current-change="handlePage"
             />
           </div>
-        </el-card>
+        </section>
 
-        <el-card class="module side" shadow="never">
-          <h3 class="side-title">热门动态</h3>
-          <ul class="hot-list">
+        <aside class="module-card side">
+          <div class="module-head">
+            <div>
+              <p class="module-eyebrow">阅读排行</p>
+              <h2 class="section-title">热门动态</h2>
+            </div>
+          </div>
+          <StatePanel
+            v-if="loading && !hotList.length"
+            state="loading"
+            tone="portal"
+            title="正在加载热门动态"
+            description="正在根据浏览量整理热门内容。"
+            compact
+          />
+          <StatePanel
+            v-else-if="!hotList.length"
+            tone="portal"
+            title="暂无热门动态"
+            description="新的热门内容会展示在这里。"
+            compact
+          />
+          <ul v-else class="hot-list">
             <li v-for="item in hotList" :key="item.id">
               <strong>{{ item.title }}</strong>
               <span>浏览 {{ item.views || 0 }}</span>
             </li>
           </ul>
-        </el-card>
+        </aside>
       </section>
     </main>
   </div>
@@ -58,8 +103,11 @@
 import { onMounted, reactive, ref } from 'vue'
 import dayjs from 'dayjs'
 import { pageDynamicsApi, type DynamicModel } from '@/api/content'
+import StatePanel from '@/components/shared/StatePanel.vue'
+import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
 import PortalNavBar from './PortalNavBar.vue'
 
+const loading = ref(false)
 const list = ref<DynamicModel[]>([])
 const hotList = ref<DynamicModel[]>([])
 const total = ref(0)
@@ -90,15 +138,20 @@ function typeLabel(type: string) {
 }
 
 async function load() {
-  const res = await pageDynamicsApi({
-    current: query.current,
-    size: query.size,
-    type: query.type || undefined,
-    keyword: query.keyword || undefined,
-    onlyPublished: true
-  })
-  list.value = res.records
-  total.value = res.total
+  loading.value = true
+  try {
+    const res = await pageDynamicsApi({
+      current: query.current,
+      size: query.size,
+      type: query.type || undefined,
+      keyword: query.keyword || undefined,
+      onlyPublished: true
+    })
+    list.value = res.records
+    total.value = res.total
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadHot() {
@@ -124,6 +177,8 @@ onMounted(async () => {
 .portal-wrap {
   width: min(1220px, calc(100% - 24px));
   margin: 14px auto 40px;
+  display: grid;
+  gap: 14px;
 }
 
 .layout {
@@ -132,9 +187,28 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.module {
-  border-radius: 16px;
+.module-card {
+  border-radius: 18px;
   border: 1px solid var(--cvs-border);
+  background: rgba(255, 255, 255, 0.94);
+  padding: 18px;
+  box-shadow: var(--cvs-shadow-soft);
+}
+
+.module-head {
+  margin-bottom: 14px;
+}
+
+.module-eyebrow {
+  margin: 0 0 6px;
+  color: #2a7a5f;
+  font-size: var(--cvs-font-size-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.module-head :deep(.section-title) {
+  margin-bottom: 0;
 }
 
 .toolbar {
@@ -197,11 +271,6 @@ onMounted(async () => {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
-}
-
-.side-title {
-  margin: 0 0 12px;
-  font-size: 18px;
 }
 
 .hot-list {

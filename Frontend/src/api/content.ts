@@ -38,7 +38,9 @@ export interface CommentModel {
   targetId: number
   userId: number
   content: string
+  testDataTag?: string
   status: number
+  createTime?: string
 }
 
 export interface BannerModel {
@@ -67,6 +69,10 @@ export interface HomePayload {
 export interface FavoriteModel {
   id: number
   activityId: number
+  activityTitle?: string
+  activityAddress?: string
+  activityStartTime?: string
+  activityEndTime?: string
   note?: string
   tag?: string
   priority?: number
@@ -103,6 +109,14 @@ export function batchDeleteDynamicsApi(ids: number[]) {
   return request.post('/api/content/dynamics/batch-delete', { ids })
 }
 
+export function batchArchiveDynamicsApi(ids: number[]) {
+  return request.post('/api/content/dynamics/batch-archive', { ids })
+}
+
+export function batchRestoreDynamicsApi(ids: number[]) {
+  return request.post('/api/content/dynamics/batch-restore', { ids })
+}
+
 export function pageNoticesApi(params: { current: number; size: number; onlyPublished?: boolean }) {
   return request.get<never, PageResult<NoticeModel>>('/api/content/notices/page', { params })
 }
@@ -121,6 +135,14 @@ export function deleteNoticeApi(id: number) {
 
 export function batchDeleteNoticesApi(ids: number[]) {
   return request.post('/api/content/notices/batch-delete', { ids })
+}
+
+export function batchArchiveNoticesApi(ids: number[]) {
+  return request.post('/api/content/notices/batch-archive', { ids })
+}
+
+export function batchRestoreNoticesApi(ids: number[]) {
+  return request.post('/api/content/notices/batch-restore', { ids })
 }
 
 export function pageForumPostsApi(params: {
@@ -176,6 +198,7 @@ export function pageCommentsApi(params: {
   onlyMine?: boolean
   targetType?: string
   targetId?: number
+  includeTestData?: boolean
 }) {
   return request.get<never, PageResult<CommentModel>>('/api/content/comments/page', { params })
 }

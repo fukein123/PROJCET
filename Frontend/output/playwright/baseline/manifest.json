@@ -1,0 +1,49 @@
+{
+  "generatedAt": "2026-03-13T05:46:10.127Z",
+  "baseUrl": "http://127.0.0.1:5173",
+  "apiBaseUrl": "http://127.0.0.1:8080",
+  "pages": [
+    {
+      "key": "portal-home",
+      "label": "门户首页",
+      "route": "/portal/home",
+      "file": "output/playwright/baseline/portal-home.png"
+    },
+    {
+      "key": "portal-activities",
+      "label": "活动列表",
+      "route": "/portal/activities",
+      "file": "output/playwright/baseline/portal-activities.png"
+    },
+    {
+      "key": "portal-forum",
+      "label": "社区论坛",
+      "route": "/portal/forum",
+      "file": "output/playwright/baseline/portal-forum.png"
+    },
+    {
+      "key": "volunteer-home",
+      "label": "志愿者首页",
+      "route": "/volunteer/home",
+      "file": "output/playwright/baseline/volunteer-home.png"
+    },
+    {
+      "key": "volunteer-activity-center",
+      "label": "活动中心",
+      "route": "/volunteer/activity-center",
+      "file": "output/playwright/baseline/volunteer-activity-center.png"
+    },
+    {
+      "key": "volunteer-profile",
+      "label": "个人中心",
+      "route": "/volunteer/profile",
+      "file": "output/playwright/baseline/volunteer-profile.png"
+    },
+    {
+      "key": "volunteer-my-posts",
+      "label": "我的帖子",
+      "route": "/volunteer/my-posts",
+      "file": "output/playwright/baseline/volunteer-my-posts.png"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root {
+  color-scheme: light;
+
+  /* Typography */
+  --cvs-font-family-sans: 'Manrope', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --cvs-font-size-xs: 12px;
+  --cvs-font-size-sm: 13px;
+  --cvs-font-size-md: 14px;
+  --cvs-font-size-lg: 16px;
+  --cvs-font-size-xl: 22px;
+  --cvs-font-size-2xl: 28px;
+  --cvs-font-weight-medium: 500;
+  --cvs-font-weight-semibold: 600;
+  --cvs-font-weight-bold: 700;
+  --cvs-font-weight-heavy: 800;
+  --cvs-line-height-tight: 1.2;
+  --cvs-line-height-normal: 1.5;
+
+  /* Spacing */
+  --cvs-space-1: 4px;
+  --cvs-space-2: 8px;
+  --cvs-space-3: 12px;
+  --cvs-space-4: 16px;
+  --cvs-space-5: 20px;
+  --cvs-space-6: 24px;
+  --cvs-space-8: 32px;
+
+  /* Radius */
+  --cvs-radius-sm: 8px;
+  --cvs-radius-md: 12px;
+  --cvs-radius-lg: 16px;
+  --cvs-radius-xl: 20px;
+  --cvs-radius-pill: 999px;
+
+  /* Motion */
+  --cvs-motion-fast: 0.15s;
+  --cvs-motion-base: 0.22s;
+  --cvs-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Surface and text */
+  --cvs-color-bg: #f5f7f4;
+  --cvs-color-bg-soft: #eef3ed;
+  --cvs-color-surface: #ffffff;
+  --cvs-color-border: #d8dfd6;
+  --cvs-color-text-main: #1a2520;
+  --cvs-color-text-sub: #55645d;
+  --cvs-color-text-muted: #73827b;
+
+  /* Brand */
+  --cvs-color-primary: #1f7a54;
+  --cvs-color-primary-strong: #18583c;
+  --cvs-color-primary-ink: #0f3927;
+  --cvs-color-accent: #efc264;
+  --cvs-color-warning: #d28a28;
+  --cvs-color-info: #5e7068;
+  --cvs-color-danger: #d54848;
+  --cvs-color-primary-soft: #e4f1ea;
+  --cvs-color-warning-soft: #fff4df;
+  --cvs-color-info-soft: #edf1ef;
+  --cvs-color-danger-soft: #fdeceb;
+
+  /* Decorative */
+  --cvs-app-background:
+    radial-gradient(circle at 10% -10%, rgba(31, 122, 84, 0.14), transparent 38%),
+    radial-gradient(circle at 90% 10%, rgba(239, 194, 100, 0.18), transparent 42%),
+    linear-gradient(180deg, #f8faf7, #f2f5f1);
+  --cvs-shadow-soft: 0 14px 30px rgba(24, 43, 34, 0.08);
+  --cvs-shadow-card-hover: 0 18px 34px rgba(24, 43, 34, 0.12);
+  --cvs-shadow-focus-ring: 0 0 0 3px rgba(31, 122, 84, 0.14);
+  --cvs-table-header-bg: #f6f8f4;
+  --cvs-table-row-hover: #f1f6f2;
+  --cvs-overlay-surface: rgba(255, 255, 255, 0.92);
+  --cvs-control-height-md: 40px;
+  --cvs-control-height-lg: 44px;
+
+  /* Compatibility aliases */
+  --cvs-bg: var(--cvs-color-bg);
+  --cvs-bg-soft: var(--cvs-color-bg-soft);
+  --cvs-border: var(--cvs-color-border);
+  --cvs-text-main: var(--cvs-color-text-main);
+  --cvs-text-sub: var(--cvs-color-text-sub);
+  --cvs-primary: var(--cvs-color-primary);
+  --cvs-primary-ink: var(--cvs-color-primary-ink);
+  --cvs-accent: var(--cvs-color-accent);
+  --cvs-card: var(--cvs-color-surface);
+  --cvs-danger: var(--cvs-color-danger);
+}

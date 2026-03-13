@@ -1,17 +1,36 @@
-﻿<template>
-  <div class="fade-up">
-    <el-card class="module" shadow="never">
-      <el-tabs v-model="tab">
-        <el-tab-pane label="信息动态" name="dynamic">
-          <div class="tab-head">
-            <div class="left-actions">
-              <el-button type="danger" plain :disabled="!selectedDynamics.length" @click="batchDeleteDynamics">
-                批量删除
-              </el-button>
-            </div>
+<template>
+  <AdminListScaffold
+    title="内容运营管理"
+    description="按模块管理门户动态、系统公告、论坛审核与评论清理，各标签页独立分页、独立刷新，避免重载整页。"
+  >
+    <el-tabs v-model="tab" class="content-tabs">
+      <el-tab-pane label="信息动态" name="dynamic">
+        <AdminContentSection
+          title="信息动态"
+          description="统一管理社区新闻与活动动态，支持封面上传、状态控制、批量归档和批量清理。"
+          :loading="dynamicLoading && !dynamics.length"
+          :empty="!dynamicLoading && !dynamics.length"
+          loading-title="正在加载动态列表"
+          loading-description="请稍候，系统正在拉取最新动态内容。"
+          empty-title="当前暂无动态"
+          empty-description="可以先发布一条社区新闻或活动动态，后续会按分页展示。"
+        >
+          <template #actions>
+            <el-button type="warning" plain :disabled="!selectedDynamics.length" @click="batchArchiveDynamics">
+              批量归档
+            </el-button>
+            <el-button plain :disabled="!selectedDynamics.length" @click="batchRestoreDynamics">恢复发布</el-button>
+            <el-button type="danger" plain :disabled="!selectedDynamics.length" @click="batchDeleteDynamics">
+              批量删除
+            </el-button>
             <el-button type="primary" @click="openDynamicCreate">新增动态</el-button>
-          </div>
-          <el-table :data="dynamics" border @selection-change="onDynamicSelection">
+          </template>
+
+          <template #emptyActions>
+            <el-button type="primary" @click="openDynamicCreate">立即新增动态</el-button>
+          </template>
+
+          <el-table :data="dynamics" border v-loading="dynamicLoading" @selection-change="onDynamicSelection">
             <el-table-column type="selection" width="48" />
             <el-table-column label="图片" width="90">
               <template #default="{ row }">
@@ -36,14 +55,48 @@
               </template>
             </el-table-column>
           </el-table>
-        </el-tab-pane>
 
-        <el-tab-pane label="系统公告" name="notice">
-          <div class="tab-head">
-            <el-button type="danger" plain :disabled="!selectedNotices.length" @click="batchDeleteNotices">批量删除</el-button>
+          <template #pagination>
+            <el-pagination
+              layout="total, sizes, prev, pager, next"
+              :current-page="dynamicQuery.current"
+              :page-size="dynamicQuery.size"
+              :page-sizes="pageSizes"
+              :total="dynamicTotal"
+              @current-change="handleDynamicPageChange"
+              @size-change="handleDynamicSizeChange"
+            />
+          </template>
+        </AdminContentSection>
+      </el-tab-pane>
+
+      <el-tab-pane label="系统公告" name="notice">
+        <AdminContentSection
+          title="系统公告"
+          description="用于维护门户公告栏信息，支持状态切换、编辑、批量归档与批量清理。"
+          :loading="noticeLoading && !notices.length"
+          :empty="!noticeLoading && !notices.length"
+          loading-title="正在加载公告列表"
+          loading-description="请稍候，系统正在同步最新公告。"
+          empty-title="当前暂无公告"
+          empty-description="可以先创建一条新的系统公告，便于门户端统一展示。"
+        >
+          <template #actions>
+            <el-button type="warning" plain :disabled="!selectedNotices.length" @click="batchArchiveNotices">
+              批量归档
+            </el-button>
+            <el-button plain :disabled="!selectedNotices.length" @click="batchRestoreNotices">恢复发布</el-button>
+            <el-button type="danger" plain :disabled="!selectedNotices.length" @click="batchDeleteNotices">
+              批量删除
+            </el-button>
             <el-button type="primary" @click="openNoticeCreate">新增公告</el-button>
-          </div>
-          <el-table :data="notices" border @selection-change="onNoticeSelection">
+          </template>
+
+          <template #emptyActions>
+            <el-button type="primary" @click="openNoticeCreate">立即新增公告</el-button>
+          </template>
+
+          <el-table :data="notices" border v-loading="noticeLoading" @selection-change="onNoticeSelection">
             <el-table-column type="selection" width="48" />
             <el-table-column prop="title" label="标题" min-width="220" />
             <el-table-column label="状态" width="100">
@@ -61,19 +114,42 @@
               </template>
             </el-table-column>
           </el-table>
-        </el-tab-pane>
 
-        <el-tab-pane label="论坛帖子审核" name="post">
-          <div class="tab-head">
+          <template #pagination>
+            <el-pagination
+              layout="total, sizes, prev, pager, next"
+              :current-page="noticeQuery.current"
+              :page-size="noticeQuery.size"
+              :page-sizes="pageSizes"
+              :total="noticeTotal"
+              @current-change="handleNoticePageChange"
+              @size-change="handleNoticeSizeChange"
+            />
+          </template>
+        </AdminContentSection>
+      </el-tab-pane>
+
+      <el-tab-pane label="论坛帖子审核" name="post">
+        <AdminContentSection
+          title="论坛帖子审核"
+          description="仅刷新当前审核标签页，支持通过、拒绝与批量删除历史帖子。"
+          :loading="postLoading && !posts.length"
+          :empty="!postLoading && !posts.length"
+          loading-title="正在加载帖子审核列表"
+          loading-description="请稍候，系统正在同步论坛审核数据。"
+          empty-title="当前暂无待管理帖子"
+          empty-description="帖子审核和历史帖子清理结果会在这里按分页显示。"
+        >
+          <template #actions>
             <el-button type="danger" plain :disabled="!selectedPosts.length" @click="batchDeletePosts">批量删除</el-button>
-            <span class="tip">支持审核与批量清理历史帖子</span>
-          </div>
-          <el-table :data="posts" border @selection-change="onPostSelection">
+          </template>
+
+          <el-table :data="posts" border v-loading="postLoading" @selection-change="onPostSelection">
             <el-table-column type="selection" width="48" />
             <el-table-column prop="title" label="标题" min-width="200" />
             <el-table-column prop="status" label="状态" width="120">
               <template #default="{ row }">
-                <el-tag :type="postStatusTag(row.status)">{{ postStatusLabel(row.status) }}</el-tag>
+                <el-tag :type="getForumPostStatusTag(row.status)">{{ getForumPostStatusLabel(row.status) }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="auditReason" label="审核说明" min-width="220" />
@@ -94,20 +170,53 @@
               </template>
             </el-table-column>
           </el-table>
-        </el-tab-pane>
 
-        <el-tab-pane label="评论管理" name="comment">
-          <div class="tab-head">
+          <template #pagination>
+            <el-pagination
+              layout="total, sizes, prev, pager, next"
+              :current-page="postQuery.current"
+              :page-size="postQuery.size"
+              :page-sizes="pageSizes"
+              :total="postTotal"
+              @current-change="handlePostPageChange"
+              @size-change="handlePostSizeChange"
+            />
+          </template>
+        </AdminContentSection>
+      </el-tab-pane>
+
+      <el-tab-pane label="评论管理" name="comment">
+        <AdminContentSection
+          title="评论管理"
+          description="默认隔离测试标记评论，管理端可显式查看并清理自动化残留，避免业务评论视图被测试数据污染。"
+          :loading="commentLoading && !comments.length"
+          :empty="!commentLoading && !comments.length"
+          loading-title="正在加载评论列表"
+          loading-description="请稍候，系统正在拉取最新评论数据。"
+          empty-title="当前暂无评论数据"
+          empty-description="评论清理结果会在这里按分页展示，便于逐页处理。"
+        >
+          <template #actions>
             <el-button type="danger" plain :disabled="!selectedComments.length" @click="batchDeleteComments">
               批量删除
             </el-button>
-            <span class="tip">自动过滤“自动化冒烟评论”展示内容</span>
-          </div>
-          <el-table :data="comments" border @selection-change="onCommentSelection">
+          </template>
+
+          <el-table :data="comments" border v-loading="commentLoading" @selection-change="onCommentSelection">
             <el-table-column type="selection" width="48" />
-            <el-table-column prop="targetType" label="目标类型" width="120" />
+            <el-table-column label="目标类型" width="120">
+              <template #default="{ row }">
+                {{ getCommentTargetLabel(row.targetType) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="targetId" label="目标ID" width="120" />
             <el-table-column prop="userId" label="用户ID" width="120" />
+            <el-table-column label="数据标记" width="140">
+              <template #default="{ row }">
+                <el-tag v-if="row.testDataTag" type="warning">测试数据</el-tag>
+                <span v-else>业务数据</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="content" label="评论内容" min-width="260" />
             <el-table-column label="操作" width="110">
               <template #default="{ row }">
@@ -115,9 +224,21 @@
               </template>
             </el-table-column>
           </el-table>
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
+
+          <template #pagination>
+            <el-pagination
+              layout="total, sizes, prev, pager, next"
+              :current-page="commentQuery.current"
+              :page-size="commentQuery.size"
+              :page-sizes="pageSizes"
+              :total="commentTotal"
+              @current-change="handleCommentPageChange"
+              @size-change="handleCommentSizeChange"
+            />
+          </template>
+        </AdminContentSection>
+      </el-tab-pane>
+    </el-tabs>
 
     <el-dialog
       v-model="dynamicVisible"
@@ -187,21 +308,31 @@
         <el-button type="primary" @click="submitNotice">保存</el-button>
       </template>
     </el-dialog>
-  </div>
+  </AdminListScaffold>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { UploadProps, UploadRequestOptions } from 'element-plus'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import AdminContentSection from '@/components/admin/AdminContentSection.vue'
+import AdminListScaffold from '@/components/admin/AdminListScaffold.vue'
 import { uploadImageApi } from '@/api/common'
+import { useSelectionIds } from '@/composables/useSelectionIds'
+import { useTable, type TableQuery } from '@/composables/useTable'
+import { runConfirmedAction } from '@/utils/confirmed-action'
+import { getCommentTargetLabel, getForumPostStatusLabel, getForumPostStatusTag } from '@/utils/display'
 import { validateImageFile } from '@/utils/upload'
 import {
   auditPostApi,
+  batchArchiveDynamicsApi,
+  batchArchiveNoticesApi,
   batchDeleteCommentsApi,
   batchDeleteDynamicsApi,
   batchDeleteForumPostsApi,
   batchDeleteNoticesApi,
+  batchRestoreDynamicsApi,
+  batchRestoreNoticesApi,
   deleteCommentApi,
   deleteDynamicApi,
   deleteForumPostApi,
@@ -222,19 +353,103 @@ import {
 
 const dynamicFallback =
   'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=80'
+const pageSizes = [10, 20, 30, 50]
 
-const tab = ref('dynamic')
-const dynamics = ref<DynamicModel[]>([])
-const notices = ref<NoticeModel[]>([])
-const posts = ref<PostModel[]>([])
-const comments = ref<CommentModel[]>([])
-const selectedDynamics = ref<number[]>([])
-const selectedNotices = ref<number[]>([])
-const selectedPosts = ref<number[]>([])
-const selectedComments = ref<number[]>([])
+type ContentTabKey = 'dynamic' | 'notice' | 'post' | 'comment'
+
+function createPagedTable<TRecord>(fetcher: (params: TableQuery) => Promise<{ total: number; records: TRecord[] }>) {
+  return useTable<TRecord, TableQuery>({
+    initialQuery: {
+      current: 1,
+      size: 10
+    },
+    fetcher
+  })
+}
+
+const tab = ref<ContentTabKey>('dynamic')
+const {
+  loading: dynamicLoading,
+  records: dynamics,
+  total: dynamicTotal,
+  query: dynamicQuery,
+  load: loadDynamics,
+  handlePage: handleDynamicPage,
+  handleSizeChange: handleDynamicPageSize
+} = createPagedTable<DynamicModel>((params) =>
+  pageDynamicsApi({
+    current: params.current,
+    size: params.size,
+    onlyPublished: false
+  })
+)
+const {
+  loading: noticeLoading,
+  records: notices,
+  total: noticeTotal,
+  query: noticeQuery,
+  load: loadNotices,
+  handlePage: handleNoticePage,
+  handleSizeChange: handleNoticePageSize
+} = createPagedTable<NoticeModel>((params) =>
+  pageNoticesApi({
+    current: params.current,
+    size: params.size,
+    onlyPublished: false
+  })
+)
+const {
+  loading: postLoading,
+  records: posts,
+  total: postTotal,
+  query: postQuery,
+  load: loadPosts,
+  handlePage: handlePostPage,
+  handleSizeChange: handlePostPageSize
+} = createPagedTable<PostModel>((params) =>
+  pageForumPostsApi({
+    current: params.current,
+    size: params.size,
+    onlyApproved: false
+  })
+)
+const {
+  loading: commentLoading,
+  records: comments,
+  total: commentTotal,
+  query: commentQuery,
+  load: loadComments,
+  handlePage: handleCommentPage,
+  handleSizeChange: handleCommentPageSize
+} = createPagedTable<CommentModel>((params) =>
+  pageCommentsApi({
+    current: params.current,
+    size: params.size,
+    includeTestData: true
+  })
+)
+
+const { selectedIds: selectedDynamics, handleSelectionChange: onDynamicSelection, clearSelection: clearDynamicSelection } =
+  useSelectionIds<DynamicModel>()
+const { selectedIds: selectedNotices, handleSelectionChange: onNoticeSelection, clearSelection: clearNoticeSelection } =
+  useSelectionIds<NoticeModel>()
+const { selectedIds: selectedPosts, handleSelectionChange: onPostSelection, clearSelection: clearPostSelection } =
+  useSelectionIds<PostModel>()
+const {
+  selectedIds: selectedComments,
+  handleSelectionChange: onCommentSelection,
+  clearSelection: clearCommentSelection
+} = useSelectionIds<CommentModel>()
+
 const dynamicVisible = ref(false)
 const noticeVisible = ref(false)
 const dynamicImageUploading = ref(false)
+const loadedTabs = reactive<Record<ContentTabKey, boolean>>({
+  dynamic: false,
+  notice: false,
+  post: false,
+  comment: false
+})
 
 const dynamicForm = reactive<Partial<DynamicModel>>({
   id: undefined,
@@ -266,9 +481,7 @@ const noticeStatusSwitch = computed({
   }
 })
 
-const beforeImageUpload: UploadProps['beforeUpload'] = (rawFile) => {
-  return validateImageFile(rawFile)
-}
+const beforeImageUpload: UploadProps['beforeUpload'] = (rawFile) => validateImageFile(rawFile)
 
 async function handleDynamicImageUpload(option: UploadRequestOptions) {
   dynamicImageUploading.value = true
@@ -279,64 +492,91 @@ async function handleDynamicImageUpload(option: UploadRequestOptions) {
     ElMessage.success('图片上传成功')
     option.onSuccess?.(res)
   } catch (error) {
-    option.onError?.(error as any)
+    option.onError?.(error as never)
   } finally {
     dynamicImageUploading.value = false
   }
 }
 
-function onDynamicSelection(rows: DynamicModel[]) {
-  selectedDynamics.value = rows.map((item) => item.id)
+const tabLoaders: Record<ContentTabKey, () => Promise<void>> = {
+  dynamic: () => loadDynamics(),
+  notice: () => loadNotices(),
+  post: () => loadPosts(),
+  comment: () => loadComments()
 }
 
-function onNoticeSelection(rows: NoticeModel[]) {
-  selectedNotices.value = rows.map((item) => item.id)
+async function loadTab(name: ContentTabKey = tab.value) {
+  await tabLoaders[name]()
+  loadedTabs[name] = true
 }
 
-function onPostSelection(rows: PostModel[]) {
-  selectedPosts.value = rows.map((item) => item.id)
+async function refreshTab(name: ContentTabKey) {
+  await loadTab(name)
 }
 
-function onCommentSelection(rows: CommentModel[]) {
-  selectedComments.value = rows.map((item) => item.id)
+async function handleDynamicPageChange(page: number) {
+  clearDynamicSelection()
+  await handleDynamicPage(page)
 }
 
-async function load() {
-  const [dynamicRes, noticeRes, postRes, commentRes] = await Promise.all([
-    pageDynamicsApi({ current: 1, size: 50, onlyPublished: false }),
-    pageNoticesApi({ current: 1, size: 50, onlyPublished: false }),
-    pageForumPostsApi({ current: 1, size: 50, onlyApproved: false }),
-    pageCommentsApi({ current: 1, size: 200 })
-  ])
-  dynamics.value = dynamicRes.records
-  notices.value = noticeRes.records
-  posts.value = postRes.records
-  comments.value = commentRes.records
+async function handleDynamicSizeChange(size: number) {
+  clearDynamicSelection()
+  await handleDynamicPageSize(size)
+}
+
+async function handleNoticePageChange(page: number) {
+  clearNoticeSelection()
+  await handleNoticePage(page)
+}
+
+async function handleNoticeSizeChange(size: number) {
+  clearNoticeSelection()
+  await handleNoticePageSize(size)
+}
+
+async function handlePostPageChange(page: number) {
+  clearPostSelection()
+  await handlePostPage(page)
+}
+
+async function handlePostSizeChange(size: number) {
+  clearPostSelection()
+  await handlePostPageSize(size)
+}
+
+async function handleCommentPageChange(page: number) {
+  clearCommentSelection()
+  await handleCommentPage(page)
+}
+
+async function handleCommentSizeChange(size: number) {
+  clearCommentSelection()
+  await handleCommentPageSize(size)
 }
 
 async function audit(id: number, status: string) {
-  let reason = ''
-  if (status === 'REJECTED') {
-    const result = await ElMessageBox.prompt('请输入拒绝原因', '帖子审核')
-    reason = result.value
-  }
-  await auditPostApi(id, { status, reason })
-  ElMessage.success(status === 'APPROVED' ? '帖子已通过审核' : '帖子已拒绝')
-  await load()
-}
-
-function postStatusLabel(status: string) {
-  if (status === 'PENDING') return '待审核'
-  if (status === 'APPROVED') return '已通过'
-  if (status === 'REJECTED') return '已拒绝'
-  return status
-}
-
-function postStatusTag(status: string) {
-  if (status === 'PENDING') return 'warning'
-  if (status === 'APPROVED') return 'success'
-  if (status === 'REJECTED') return 'danger'
-  return 'info'
+  await runConfirmedAction({
+    message: status === 'APPROVED' ? '确认通过该帖子审核吗？' : '请输入拒绝原因',
+    title: '帖子审核',
+    type: status === 'APPROVED' ? 'success' : 'warning',
+    confirmButtonText: status === 'APPROVED' ? '确认通过' : '确认拒绝',
+    prompt:
+      status === 'REJECTED'
+        ? {
+            message: '请输入拒绝原因',
+            inputPlaceholder: '拒绝原因必填',
+            inputType: 'textarea',
+            inputValidator: (value) => (value.trim() ? true : '请输入拒绝原因')
+          }
+        : undefined,
+    action: (reason) =>
+      auditPostApi(id, {
+        status,
+        reason: status === 'REJECTED' ? (reason || '').trim() : ''
+      }),
+    successMessage: status === 'APPROVED' ? '帖子已通过审核' : '帖子已拒绝',
+    afterSuccess: () => refreshTab('post')
+  })
 }
 
 function openDynamicCreate() {
@@ -357,6 +597,16 @@ function openDynamicEdit(row: DynamicModel) {
 }
 
 async function submitDynamic() {
+  dynamicForm.title = (dynamicForm.title || '').trim()
+  dynamicForm.content = (dynamicForm.content || '').trim()
+  if (!dynamicForm.title) {
+    ElMessage.warning('请输入动态标题')
+    return
+  }
+  if (!dynamicForm.content) {
+    ElMessage.warning('请输入动态内容')
+    return
+  }
   if (dynamicForm.id) {
     await updateDynamicApi(dynamicForm.id, dynamicForm)
   } else {
@@ -364,7 +614,7 @@ async function submitDynamic() {
   }
   dynamicVisible.value = false
   ElMessage.success('动态保存成功')
-  await load()
+  await refreshTab('dynamic')
 }
 
 function openNoticeCreate() {
@@ -383,6 +633,16 @@ function openNoticeEdit(row: NoticeModel) {
 }
 
 async function submitNotice() {
+  noticeForm.title = (noticeForm.title || '').trim()
+  noticeForm.content = (noticeForm.content || '').trim()
+  if (!noticeForm.title) {
+    ElMessage.warning('请输入公告标题')
+    return
+  }
+  if (!noticeForm.content) {
+    ElMessage.warning('请输入公告内容')
+    return
+  }
   if (noticeForm.id) {
     await updateNoticeApi(noticeForm.id, noticeForm)
   } else {
@@ -390,101 +650,201 @@ async function submitNotice() {
   }
   noticeVisible.value = false
   ElMessage.success('公告保存成功')
-  await load()
+  await refreshTab('notice')
 }
 
 async function deleteDynamic(id: number) {
-  await ElMessageBox.confirm('确认删除该动态？', '删除动态', { type: 'warning' })
-  await deleteDynamicApi(id)
-  ElMessage.success('删除成功')
-  await load()
+  await runConfirmedAction({
+    message: '确认删除该动态？',
+    title: '删除动态',
+    action: () => deleteDynamicApi(id),
+    successMessage: '删除成功',
+    afterSuccess: () => refreshTab('dynamic')
+  })
 }
 
 async function batchDeleteDynamics() {
-  await ElMessageBox.confirm(`确认批量删除 ${selectedDynamics.value.length} 条动态？`, '批量删除动态', {
-    type: 'warning'
+  if (!selectedDynamics.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认批量删除 ${selectedDynamics.value.length} 条动态？`,
+    title: '批量删除动态',
+    action: () => batchDeleteDynamicsApi(selectedDynamics.value),
+    successMessage: '批量删除成功',
+    afterSuccess: async () => {
+      clearDynamicSelection()
+      await refreshTab('dynamic')
+    }
   })
-  await batchDeleteDynamicsApi(selectedDynamics.value)
-  selectedDynamics.value = []
-  ElMessage.success('批量删除成功')
-  await load()
+}
+
+async function batchArchiveDynamics() {
+  if (!selectedDynamics.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认批量归档 ${selectedDynamics.value.length} 条动态？`,
+    title: '批量归档动态',
+    type: 'warning',
+    action: () => batchArchiveDynamicsApi(selectedDynamics.value),
+    successMessage: '动态已批量归档',
+    afterSuccess: async () => {
+      clearDynamicSelection()
+      await refreshTab('dynamic')
+    }
+  })
+}
+
+async function batchRestoreDynamics() {
+  if (!selectedDynamics.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认恢复发布 ${selectedDynamics.value.length} 条动态？`,
+    title: '恢复发布动态',
+    action: () => batchRestoreDynamicsApi(selectedDynamics.value),
+    successMessage: '动态已恢复发布',
+    afterSuccess: async () => {
+      clearDynamicSelection()
+      await refreshTab('dynamic')
+    }
+  })
 }
 
 async function deleteNotice(id: number) {
-  await ElMessageBox.confirm('确认删除该公告？', '删除公告', { type: 'warning' })
-  await deleteNoticeApi(id)
-  ElMessage.success('删除成功')
-  await load()
+  await runConfirmedAction({
+    message: '确认删除该公告？',
+    title: '删除公告',
+    action: () => deleteNoticeApi(id),
+    successMessage: '删除成功',
+    afterSuccess: () => refreshTab('notice')
+  })
 }
 
 async function batchDeleteNotices() {
-  await ElMessageBox.confirm(`确认批量删除 ${selectedNotices.value.length} 条公告？`, '批量删除公告', {
-    type: 'warning'
+  if (!selectedNotices.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认批量删除 ${selectedNotices.value.length} 条公告？`,
+    title: '批量删除公告',
+    action: () => batchDeleteNoticesApi(selectedNotices.value),
+    successMessage: '批量删除成功',
+    afterSuccess: async () => {
+      clearNoticeSelection()
+      await refreshTab('notice')
+    }
   })
-  await batchDeleteNoticesApi(selectedNotices.value)
-  selectedNotices.value = []
-  ElMessage.success('批量删除成功')
-  await load()
+}
+
+async function batchArchiveNotices() {
+  if (!selectedNotices.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认批量归档 ${selectedNotices.value.length} 条公告？`,
+    title: '批量归档公告',
+    type: 'warning',
+    action: () => batchArchiveNoticesApi(selectedNotices.value),
+    successMessage: '公告已批量归档',
+    afterSuccess: async () => {
+      clearNoticeSelection()
+      await refreshTab('notice')
+    }
+  })
+}
+
+async function batchRestoreNotices() {
+  if (!selectedNotices.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认恢复发布 ${selectedNotices.value.length} 条公告？`,
+    title: '恢复发布公告',
+    action: () => batchRestoreNoticesApi(selectedNotices.value),
+    successMessage: '公告已恢复发布',
+    afterSuccess: async () => {
+      clearNoticeSelection()
+      await refreshTab('notice')
+    }
+  })
 }
 
 async function deletePost(id: number) {
-  await ElMessageBox.confirm('确认删除该帖子？', '删除帖子', { type: 'warning' })
-  await deleteForumPostApi(id)
-  ElMessage.success('删除成功')
-  await load()
+  await runConfirmedAction({
+    message: '确认删除该帖子？',
+    title: '删除帖子',
+    action: () => deleteForumPostApi(id),
+    successMessage: '删除成功',
+    afterSuccess: () => refreshTab('post')
+  })
 }
 
 async function batchDeletePosts() {
-  await ElMessageBox.confirm(`确认批量删除 ${selectedPosts.value.length} 条帖子？`, '批量删除帖子', {
-    type: 'warning'
+  if (!selectedPosts.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认批量删除 ${selectedPosts.value.length} 条帖子？`,
+    title: '批量删除帖子',
+    action: () => batchDeleteForumPostsApi(selectedPosts.value),
+    successMessage: '批量删除成功',
+    afterSuccess: async () => {
+      clearPostSelection()
+      await refreshTab('post')
+    }
   })
-  await batchDeleteForumPostsApi(selectedPosts.value)
-  selectedPosts.value = []
-  ElMessage.success('批量删除成功')
-  await load()
 }
 
 async function deleteComment(id: number) {
-  await ElMessageBox.confirm('确认删除该评论？', '删除评论', { type: 'warning' })
-  await deleteCommentApi(id)
-  ElMessage.success('删除成功')
-  await load()
+  await runConfirmedAction({
+    message: '确认删除该评论？',
+    title: '删除评论',
+    action: () => deleteCommentApi(id),
+    successMessage: '删除成功',
+    afterSuccess: () => refreshTab('comment')
+  })
 }
 
 async function batchDeleteComments() {
-  await ElMessageBox.confirm(`确认批量删除 ${selectedComments.value.length} 条评论？`, '批量删除评论', {
-    type: 'warning'
+  if (!selectedComments.value.length) {
+    return
+  }
+
+  await runConfirmedAction({
+    message: `确认批量删除 ${selectedComments.value.length} 条评论？`,
+    title: '批量删除评论',
+    action: () => batchDeleteCommentsApi(selectedComments.value),
+    successMessage: '批量删除成功',
+    afterSuccess: async () => {
+      clearCommentSelection()
+      await refreshTab('comment')
+    }
   })
-  await batchDeleteCommentsApi(selectedComments.value)
-  selectedComments.value = []
-  ElMessage.success('批量删除成功')
-  await load()
 }
 
-onMounted(load)
+watch(tab, async (name) => {
+  if (!loadedTabs[name]) {
+    await loadTab(name)
+  }
+})
+
+onMounted(async () => {
+  await loadTab()
+})
 </script>
 
 <style scoped>
-.module {
-  border: 1px solid var(--cvs-border);
-  border-radius: 16px;
-}
-
-.tab-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.left-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.tip {
-  color: #6f7d78;
-  font-size: 13px;
+.content-tabs :deep(.el-tabs__header) {
+  margin-bottom: var(--cvs-space-3);
 }
 
 .thumb {

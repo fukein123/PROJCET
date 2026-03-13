@@ -2,7 +2,27 @@
   <div>
     <PortalNavBar />
     <main class="portal-wrap">
-      <el-card class="module" shadow="never">
+      <WorkspaceHero
+        tone="portal"
+        compact
+        eyebrow="志愿活动广场"
+        title="按分类和关键词快速筛选社区志愿活动"
+        description="统一展示活动状态、服务时间、地点与详细说明；登录后即可报名、收藏并继续进入论坛交流。"
+      >
+        <template #actions>
+          <el-button type="primary" @click="load">刷新活动</el-button>
+          <el-button @click="router.push('/portal/forum')">去论坛交流</el-button>
+        </template>
+      </WorkspaceHero>
+
+      <section class="module-card fade-up">
+        <div class="module-head">
+          <div>
+            <p class="module-eyebrow">筛选与报名</p>
+            <h2 class="section-title">活动列表</h2>
+          </div>
+        </div>
+
         <section class="toolbar">
           <div class="category-list">
             <button
@@ -32,7 +52,14 @@
           </div>
         </section>
 
-        <section class="activity-grid">
+        <StatePanel
+          v-if="loading"
+          state="loading"
+          tone="portal"
+          title="正在加载活动"
+          description="正在同步符合筛选条件的社区志愿活动。"
+        />
+        <section v-else-if="activities.length" class="activity-grid">
           <article v-for="item in activities" :key="item.id" class="activity-card">
             <div class="cover" :style="{ backgroundImage: `url(${item.coverImage || coverFor(item.id)})` }"></div>
             <div class="card-main">
@@ -47,13 +74,13 @@
               </div>
               <div class="line">
                 <span>活动地点：</span>
-                <strong>{{ item.address }}</strong>
+                <strong>{{ item.address || '待补充' }}</strong>
               </div>
               <div class="line">
                 <span>目标人数：</span>
                 <strong>{{ item.targetCount }}</strong>
               </div>
-              <p class="desc">{{ item.description }}</p>
+              <p class="desc">{{ item.description || '当前活动暂无详细说明。' }}</p>
               <el-collapse>
                 <el-collapse-item title="查看详细说明" :name="String(item.id)">
                   <p class="detail">{{ item.description || '暂无详细说明' }}</p>
@@ -66,11 +93,15 @@
               </div>
             </div>
           </article>
-
-          <div v-if="!activities.length" class="empty">当前筛选条件下暂无活动</div>
         </section>
+        <StatePanel
+          v-else
+          tone="portal"
+          title="暂无匹配活动"
+          description="可以调整分类或关键词后重新查询。"
+        />
 
-        <div class="pager">
+        <div v-if="!loading && total > 0" class="pager">
           <el-pagination
             layout="total, prev, pager, next"
             :total="total"
@@ -79,7 +110,7 @@
             @current-change="handlePage"
           />
         </div>
-      </el-card>
+      </section>
     </main>
   </div>
 </template>
@@ -96,6 +127,8 @@ import {
   type ActivityModel
 } from '@/api/activity'
 import { createFavoriteApi } from '@/api/content'
+import StatePanel from '@/components/shared/StatePanel.vue'
+import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
 import { usePortalNavigation } from '@/composables/usePortalNavigation'
 import { useUserStore } from '@/stores/userStore'
 import { formatDateTime, getActivityStatusLabel, getActivityStatusTag } from '@/utils/display'
@@ -105,6 +138,7 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const portalNav = usePortalNavigation()
+const loading = ref(false)
 const keyword = ref('')
 const categories = ref<ActivityCategory[]>([])
 const activities = ref<ActivityModel[]>([])
@@ -130,15 +164,20 @@ function coverFor(id: number) {
 }
 
 async function load() {
-  const res = await pageActivitiesApi({
-    current: query.value.current,
-    size: query.value.size,
-    keyword: keyword.value || undefined,
-    categoryId: selectedCategoryId.value,
-    status: 'PUBLISHED'
-  })
-  activities.value = res.records
-  total.value = res.total
+  loading.value = true
+  try {
+    const res = await pageActivitiesApi({
+      current: query.value.current,
+      size: query.value.size,
+      keyword: keyword.value || undefined,
+      categoryId: selectedCategoryId.value,
+      status: 'PUBLISHED'
+    })
+    activities.value = res.records
+    total.value = res.total
+  } finally {
+    loading.value = false
+  }
 }
 
 function changeCategory(categoryId: number | undefined) {
@@ -212,11 +251,32 @@ onMounted(async () => {
 .portal-wrap {
   width: min(1220px, calc(100% - 24px));
   margin: 14px auto 40px;
+  display: grid;
+  gap: 14px;
 }
 
-.module {
+.module-card {
   border: 1px solid var(--cvs-border);
-  border-radius: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 18px;
+  box-shadow: var(--cvs-shadow-soft);
+}
+
+.module-head {
+  margin-bottom: 14px;
+}
+
+.module-eyebrow {
+  margin: 0 0 6px;
+  color: #2a7a5f;
+  font-size: var(--cvs-font-size-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.module-head :deep(.section-title) {
+  margin-bottom: 0;
 }
 
 .toolbar {
@@ -232,21 +292,21 @@ onMounted(async () => {
 }
 
 .chip {
-  border: 1px solid #d94262;
-  border-radius: 9px;
-  background: #fff;
-  color: #b4183f;
-  font-weight: 700;
+  border: 1px solid rgba(31, 122, 84, 0.28);
+  border-radius: 10px;
+  background: rgba(228, 241, 234, 0.58);
+  color: #18583c;
+  font-weight: var(--cvs-font-weight-bold);
   padding: 7px 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--cvs-motion-fast) var(--cvs-ease-standard);
 }
 
 .chip.active,
 .chip:hover {
-  color: #fff;
-  background: linear-gradient(120deg, #d91f4c, #f23d64);
-  border-color: #d91f4c;
+  color: #ffffff;
+  background: linear-gradient(120deg, #1b6544, #2f8a66);
+  border-color: #1b6544;
 }
 
 .query-panel {
@@ -263,15 +323,17 @@ onMounted(async () => {
 
 .activity-card {
   border: 1px solid var(--cvs-border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform var(--cvs-motion-fast) var(--cvs-ease-standard),
+    box-shadow var(--cvs-motion-fast) var(--cvs-ease-standard);
 }
 
 .activity-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 24px rgba(49, 33, 33, 0.12);
+  box-shadow: var(--cvs-shadow-card-hover);
 }
 
 .cover {
@@ -281,7 +343,7 @@ onMounted(async () => {
 }
 
 .card-main {
-  padding: 12px;
+  padding: 14px;
   display: grid;
   gap: 8px;
 }
@@ -329,16 +391,6 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.empty {
-  border: 1px dashed #d9dee2;
-  border-radius: 12px;
-  min-height: 120px;
-  display: grid;
-  place-items: center;
-  color: #75817c;
-  grid-column: 1 / -1;
 }
 
 .pager {

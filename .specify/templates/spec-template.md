@@ -4,6 +4,7 @@
 **Created**: [DATE]  
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
+**Approval Rule**: Once this spec draft is written, create a local approval request with `scripts/local-approval.ps1` and wait for the user's chat reply (`通过` or `需修改：...`).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -74,6 +75,7 @@
 
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
+- How is UX consistency preserved across similar user journeys and screens?
 
 ## Requirements *(mandatory)*
 
@@ -89,11 +91,13 @@
 - **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-006**: System MUST define and enforce code quality and testing standards for this feature
+- **FR-007**: System MUST maintain consistent user experience patterns across related flows
 
 *Example of marking unclear requirements:*
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+- **FR-008**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
+- **FR-009**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
 
 ### Key Entities *(include if feature involves data)*
 
@@ -113,3 +117,5 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-005**: [Quality metric, e.g., "All acceptance tests defined before implementation and pass in CI"]
+- **SC-006**: [Consistency metric, e.g., "No critical UX consistency defects across core user flows"]

@@ -79,8 +79,9 @@ public class ActivityController {
                                                   @RequestParam(defaultValue = "10") long size,
                                                   @RequestParam(required = false) String keyword,
                                                   @RequestParam(required = false) Long categoryId,
-                                                  @RequestParam(required = false) String status) {
-        return ApiResponse.success(activityService.pageActivities(current, size, keyword, categoryId, status));
+                                                  @RequestParam(required = false) String status,
+                                                  @RequestParam(defaultValue = "false") boolean includeArchived) {
+        return ApiResponse.success(activityService.pageActivities(current, size, keyword, categoryId, status, includeArchived));
     }
 
     @Operation(summary = "Activity detail")
@@ -119,6 +120,22 @@ public class ActivityController {
     public ApiResponse<Void> batchDelete(@Valid @RequestBody IdListRequest request) {
         activityService.batchDeleteActivities(request.getIds());
         return ApiResponse.success("batch deleted", null);
+    }
+
+    @Operation(summary = "Admin - batch archive activities")
+    @PostMapping("/batch-archive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchArchive(@Valid @RequestBody IdListRequest request) {
+        activityService.batchArchiveActivities(request.getIds());
+        return ApiResponse.success("batch archived", null);
+    }
+
+    @Operation(summary = "Admin - batch restore activities")
+    @PostMapping("/batch-restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchRestore(@Valid @RequestBody IdListRequest request) {
+        activityService.batchRestoreActivities(request.getIds());
+        return ApiResponse.success("batch restored", null);
     }
 
     @Operation(summary = "Volunteer - apply for activity")
