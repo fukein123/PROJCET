@@ -1,5 +1,6 @@
-﻿import { computed } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
 import { useUserStore } from '@/stores/userStore'
 
 export function usePortalNavigation() {
@@ -9,7 +10,7 @@ export function usePortalNavigation() {
 
   const isLogin = computed(() => Boolean(userStore.token))
   const roleLabel = computed(() => (userStore.role === 'ADMIN' ? '管理员' : '志愿者'))
-  const workspacePath = computed(() => (userStore.role === 'ADMIN' ? '/admin/dashboard' : '/volunteer/home'))
+  const workspacePath = computed(() => (userStore.role === 'ADMIN' ? '/admin/dashboard' : PORTAL_PATHS.selfServiceHome))
 
   function toLogin(redirect = route.fullPath) {
     router.push(`/login?redirect=${encodeURIComponent(redirect)}`)
@@ -21,7 +22,7 @@ export function usePortalNavigation() {
 
   function toWorkspace() {
     if (!isLogin.value) {
-      toLogin('/portal')
+      toLogin(PORTAL_PATHS.home)
       return
     }
     router.push(workspacePath.value)
@@ -29,7 +30,7 @@ export function usePortalNavigation() {
 
   function logoutToPortal() {
     userStore.logout()
-    router.push('/portal')
+    router.push(PORTAL_PATHS.home)
   }
 
   async function requireLogin(run: () => Promise<void> | void, redirect = route.fullPath) {

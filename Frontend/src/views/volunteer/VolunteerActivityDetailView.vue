@@ -4,7 +4,7 @@
       compact
       eyebrow="活动详情"
       :title="activity?.title || '查看社区志愿活动详情'"
-      :description="activity?.content || '统一查看活动说明、评价与报名入口，保持与门户端一致的信息层级。'"
+      :description="activitySummary || '统一查看活动说明、评价与报名入口，保持与门户端一致的信息层级。'"
     >
       <template #actions>
         <el-button type="success" :disabled="!activity || loading" @click="apply">报名活动</el-button>
@@ -52,7 +52,7 @@
           <img class="cover" :src="activity.coverImage || DEFAULT_ACTIVITY_COVER" alt="活动封面" />
           <div class="meta">
             <h3>{{ activity.title }}</h3>
-            <p class="line"><span>活动内容：</span>{{ activity.content }}</p>
+            <p class="line"><span>活动内容：</span>{{ activitySummary || '待补充' }}</p>
             <p class="line"><span>活动地点：</span>{{ activity.address }}</p>
             <p class="line"><span>活动时间：</span>{{ formatDateTime(activity.startTime) }} - {{ formatDateTime(activity.endTime) }}</p>
             <p class="line"><span>志愿者人数：</span>{{ activity.volunteerQuota }}</p>
@@ -69,7 +69,7 @@
             <h2 class="section-title">活动说明</h2>
           </div>
         </div>
-        <p class="description">{{ activity.description || '暂无详细说明' }}</p>
+        <RichTextRenderer class="description" :value="activity?.description" empty-html="<p>暂无详细说明</p>" />
       </section>
 
       <section class="module-card">
@@ -114,22 +114,26 @@
       description="可以返回活动中心查看其他社区志愿活动。"
     >
       <template #actions>
-        <el-button type="primary" @click="router.push('/volunteer/activity-center')">返回活动中心</el-button>
+        <el-button type="primary" @click="router.push(PORTAL_PATHS.activities)">返回活动中心</el-button>
       </template>
     </StatePanel>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
-import { activityDetailApi, applyActivityApi, type ActivityModel } from '@/api/activity'
+import { activityDetailApi, type ActivityModel } from '@/api/activity'
 import { addCommentApi, createFavoriteApi, pageCommentsApi, type CommentModel } from '@/api/content'
+import RichTextRenderer from '@/components/shared/RichTextRenderer.vue'
 import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
+import { submitActivityApplicationWithUndo } from '@/utils/activity-apply'
 import { runConfirmedAction } from '@/utils/confirmed-action'
 import { DEFAULT_ACTIVITY_COVER, formatDateTime, getActivityStatusLabel } from '@/utils/display'
+import { richTextToPlainText } from '@/utils/rich-text'
 
 const route = useRoute()
 const router = useRouter()
@@ -144,6 +148,8 @@ const commentQuery = reactive({
   current: 1,
   size: 8
 })
+
+const activitySummary = computed(() => richTextToPlainText(activity.value?.content))
 
 async function loadDetail() {
   activity.value = await activityDetailApi(activityId)
@@ -166,13 +172,9 @@ function handleCommentPage(page: number) {
 }
 
 async function apply() {
-  await runConfirmedAction({
-    message: '确认提交该活动的报名申请吗？',
-    title: '报名活动',
-    type: 'info',
-    confirmButtonText: '确认报名',
-    action: () => applyActivityApi(activityId),
-    successMessage: '报名申请已提交，请等待审核'
+  await submitActivityApplicationWithUndo({
+    activityId,
+    refresh: loadDetail
   })
 }
 
@@ -276,9 +278,20 @@ onMounted(async () => {
 
 .description {
   margin: 0;
-  white-space: pre-wrap;
   line-height: 1.85;
   color: #3e4b46;
+}
+
+.rich-text-content :deep(p),
+.rich-text-content :deep(ul),
+.rich-text-content :deep(ol),
+.rich-text-content :deep(blockquote) {
+  margin: 0 0 14px;
+}
+
+.rich-text-content :deep(ul),
+.rich-text-content :deep(ol) {
+  padding-left: 22px;
 }
 
 .comment-create {

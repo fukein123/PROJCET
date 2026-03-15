@@ -13,9 +13,24 @@ import lombok.EqualsAndHashCode;
 public class ExchangeOrder extends BaseEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private String orderNo;
     private Long userId;
-    private String itemName;
-    private Integer points;
+    private Long productId;
+    private String userName;
+    private String realName;
+    private String productName;
+    private String productImage;
+    private String productSummary;
+    private Integer quantity;
+    private Integer pointsPerItem;
+    private Integer totalPoints;
+    private String receiverName;
+    private String receiverPhone;
+    private String receiverAddress;
+    private String requestKey;
     private String status;
+    private String statusReason;
+    private java.time.LocalDateTime shippedTime;
+    private java.time.LocalDateTime receivedTime;
+    private java.time.LocalDateTime cancelledTime;
 }
-

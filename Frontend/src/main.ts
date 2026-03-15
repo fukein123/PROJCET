@@ -1,7 +1,11 @@
 import { createApp } from 'vue'
 import {
+  ElAlert,
+  ElAvatar,
   ElButton,
   ElCard,
+  ElCarousel,
+  ElCarouselItem,
   ElCollapse,
   ElCollapseItem,
   ElDatePicker,
@@ -12,6 +16,7 @@ import {
   ElDropdownMenu,
   ElForm,
   ElFormItem,
+  ElIcon,
   ElInput,
   ElInputNumber,
   ElLoading,
@@ -28,6 +33,7 @@ import {
   ElTabPane,
   ElTabs,
   ElTag,
+  ElTooltip,
   ElTimeline,
   ElTimelineItem,
   ElUpload,
@@ -43,8 +49,12 @@ import '@/assets/styles/index.css'
 
 const app = createApp(App)
 const elementComponents = [
+  ElAlert,
+  ElAvatar,
   ElButton,
   ElCard,
+  ElCarousel,
+  ElCarouselItem,
   ElCollapse,
   ElCollapseItem,
   ElDatePicker,
@@ -55,6 +65,7 @@ const elementComponents = [
   ElDropdownMenu,
   ElForm,
   ElFormItem,
+  ElIcon,
   ElInput,
   ElInputNumber,
   ElMenu,
@@ -70,6 +81,7 @@ const elementComponents = [
   ElTabPane,
   ElTabs,
   ElTag,
+  ElTooltip,
   ElTimeline,
   ElTimelineItem,
   ElUpload,

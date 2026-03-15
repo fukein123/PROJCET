@@ -16,6 +16,7 @@ public class InfoDynamic extends BaseEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String title;
+    private String source;
     private String content;
     private String imageUrl;
     private String type;

@@ -14,6 +14,8 @@ public class ForumPost extends BaseEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String title;
+    private String coverImage;
+    private String summary;
     private String content;
     private Long categoryId;
     private Long userId;
@@ -21,4 +23,3 @@ public class ForumPost extends BaseEntity {
     private Integer views;
     private String auditReason;
 }
-

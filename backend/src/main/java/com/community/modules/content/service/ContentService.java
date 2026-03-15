@@ -3,12 +3,17 @@ package com.community.modules.content.service;
 import com.community.common.web.PageResult;
 import com.community.modules.content.dto.FavoriteRequest;
 import com.community.modules.content.dto.FavoriteUpdateRequest;
+import com.community.modules.content.dto.ExchangeOrderCreateRequest;
+import com.community.modules.content.dto.ExchangeOrderStatusRequest;
+import com.community.modules.content.dto.MallProductRequest;
 import com.community.modules.content.entity.BannerInfo;
 import com.community.modules.content.entity.CommentInfo;
+import com.community.modules.content.entity.ExchangeOrder;
 import com.community.modules.content.entity.FavoriteActivity;
 import com.community.modules.content.entity.ForumCategory;
 import com.community.modules.content.entity.ForumPost;
 import com.community.modules.content.entity.InfoDynamic;
+import com.community.modules.content.entity.MallProduct;
 import com.community.modules.content.entity.NoticeInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,6 +30,14 @@ public class ContentService {
 
     public PageResult<InfoDynamic> pageDynamics(long current, long size, String type, String keyword, boolean onlyPublished) {
         return contentQueryService.pageDynamics(current, size, type, keyword, onlyPublished);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public InfoDynamic detailDynamic(Long id) {
+        InfoDynamic dynamic = contentQueryService.detailDynamic(id);
+        contentCommandService.increaseDynamicViews(id);
+        dynamic.setViews((dynamic.getViews() == null ? 0 : dynamic.getViews()) + 1);
+        return dynamic;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -65,6 +78,10 @@ public class ContentService {
         return contentQueryService.pageNotices(current, size, onlyPublished);
     }
 
+    public NoticeInfo detailNotice(Long id) {
+        return contentQueryService.detailNotice(id);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void saveNotice(NoticeInfo notice) {
         contentCommandService.saveNotice(notice);
@@ -99,6 +116,10 @@ public class ContentService {
         return contentQueryService.listBanners();
     }
 
+    public List<BannerInfo> listBannersForAdmin() {
+        return contentQueryService.listBannersForAdmin();
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void saveBanner(BannerInfo banner) {
         contentCommandService.saveBanner(banner);
@@ -121,6 +142,10 @@ public class ContentService {
 
     public List<ForumCategory> listForumCategories() {
         return contentQueryService.listForumCategories();
+    }
+
+    public List<ForumCategory> listForumCategoriesForAdmin() {
+        return contentQueryService.listForumCategoriesForAdmin();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -148,8 +173,26 @@ public class ContentService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void saveOrUpdateMyPost(ForumPost post) {
-        contentCommandService.saveOrUpdateMyPost(post);
+    public ForumPost detailForumPost(Long id) {
+        ForumPost post = contentQueryService.detailForumPost(id);
+        contentCommandService.increaseForumPostViews(id);
+        post.setViews((post.getViews() == null ? 0 : post.getViews()) + 1);
+        return post;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ForumPost saveOrUpdateMyPost(ForumPost post) {
+        return contentCommandService.saveOrUpdateMyPost(post);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void undoMyPostSubmit(Long postId) {
+        contentCommandService.undoMyPostSubmit(postId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateForumPost(Long id, ForumPost post) {
+        contentCommandService.updateForumPostByAdmin(id, post);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -227,5 +270,66 @@ public class ContentService {
     @Transactional(rollbackFor = Exception.class)
     public void removeFavorite(Long activityId) {
         contentCommandService.removeFavorite(activityId);
+    }
+
+    public PageResult<MallProduct> pageMallProducts(long current, long size, String keyword, Integer status, boolean onlyEnabled) {
+        return contentQueryService.pageMallProducts(current, size, keyword, status, onlyEnabled);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void saveMallProduct(MallProductRequest request) {
+        contentCommandService.saveMallProduct(request);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateMallProduct(Long id, MallProductRequest request) {
+        contentCommandService.updateMallProduct(id, request);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void disableMallProduct(Long id) {
+        contentCommandService.disableMallProduct(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void enableMallProduct(Long id) {
+        contentCommandService.enableMallProduct(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDisableMallProducts(List<Long> ids) {
+        contentCommandService.batchDisableMallProducts(ids);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchEnableMallProducts(List<Long> ids) {
+        contentCommandService.batchEnableMallProducts(ids);
+    }
+
+    public PageResult<ExchangeOrder> pageMyExchangeOrders(long current, long size, String status) {
+        return contentQueryService.pageMyExchangeOrders(current, size, status);
+    }
+
+    public PageResult<ExchangeOrder> pageAdminExchangeOrders(long current,
+                                                             long size,
+                                                             String orderNo,
+                                                             String productKeyword,
+                                                             String userKeyword,
+                                                             String status) {
+        return contentQueryService.pageAdminExchangeOrders(current, size, orderNo, productKeyword, userKeyword, status);
+    }
+
+    public ExchangeOrder detailAdminExchangeOrder(Long id) {
+        return contentQueryService.detailAdminExchangeOrder(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ExchangeOrder createExchangeOrder(ExchangeOrderCreateRequest request) {
+        return contentCommandService.createExchangeOrder(request);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateExchangeOrderStatus(Long id, ExchangeOrderStatusRequest request) {
+        contentCommandService.updateExchangeOrderStatus(id, request);
     }
 }

@@ -8,8 +8,8 @@
     >
       <template #actions>
         <el-button type="primary" @click="load">刷新收藏</el-button>
-        <el-button @click="router.push('/volunteer/activity-center')">前往活动中心</el-button>
-        <el-button @click="router.push('/volunteer/my-posts')">查看我的帖子</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.activities)">前往活动中心</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.selfServicePosts)">查看我的帖子</el-button>
       </template>
     </WorkspaceHero>
 
@@ -121,6 +121,7 @@ import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
 import VolunteerPageSection from '@/components/volunteer/VolunteerPageSection.vue'
 import { useSelectionIds } from '@/composables/useSelectionIds'
 import { useTable } from '@/composables/useTable'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
 import { formatDateTime } from '@/utils/display'
 import { runConfirmedAction } from '@/utils/confirmed-action'
 

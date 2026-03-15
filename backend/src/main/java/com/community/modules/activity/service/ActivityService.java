@@ -10,6 +10,7 @@ import com.community.modules.activity.dto.ApplicationAuditRequest;
 import com.community.modules.activity.dto.CheckRecordView;
 import com.community.modules.activity.dto.SignRequest;
 import com.community.modules.activity.entity.Activity;
+import com.community.modules.activity.entity.ActivityApplication;
 import com.community.modules.activity.entity.ActivityCategory;
 import com.community.modules.activity.mapper.ActivityCategoryMapper;
 import com.community.modules.activity.mapper.ActivityMapper;
@@ -120,12 +121,26 @@ public class ActivityService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void applyForActivity(Long activityId) {
-        activityCommandService.applyForActivity(activityId);
+    public ActivityApplication applyForActivity(Long activityId, String applyReason) {
+        return activityCommandService.applyForActivity(activityId, applyReason);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void undoActivityApplication(Long applicationId) {
+        activityCommandService.undoActivityApplication(applicationId);
     }
 
     public PageResult<ActivityApplicationView> pageApplications(long current, long size, Long activityId, String status, boolean onlyMine) {
         return activityQueryService.pageApplications(current, size, activityId, status, onlyMine);
+    }
+
+    public PageResult<CheckRecordView> pageCheckRecords(long current,
+                                                        long size,
+                                                        Long activityId,
+                                                        Long userId,
+                                                        String status,
+                                                        String keyword) {
+        return activityQueryService.pageCheckRecords(current, size, activityId, userId, status, keyword);
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -38,11 +38,15 @@
               <div class="thumb" :style="{ backgroundImage: `url(${item.imageUrl || fallbackImage(item.id)})` }"></div>
               <div class="content">
                 <h3>{{ item.title }}</h3>
-                <p>{{ item.content }}</p>
+                <p>{{ preview(item.content) }}</p>
                 <div class="meta">
                   <span>{{ typeLabel(item.type) }}</span>
+                  <span>{{ item.source || '平台发布' }}</span>
                   <span>浏览 {{ item.views || 0 }}</span>
                   <span>{{ formatTime(item.publishTime) }}</span>
+                </div>
+                <div class="content-actions">
+                  <el-button type="primary" plain @click="router.push(PORTAL_PATHS.newsDetail(item.id))">查看详情</el-button>
                 </div>
               </div>
             </article>
@@ -89,7 +93,9 @@
           />
           <ul v-else class="hot-list">
             <li v-for="item in hotList" :key="item.id">
-              <strong>{{ item.title }}</strong>
+              <button class="hot-link" type="button" @click="router.push(PORTAL_PATHS.newsDetail(item.id))">
+                {{ item.title }}
+              </button>
               <span>浏览 {{ item.views || 0 }}</span>
             </li>
           </ul>
@@ -102,11 +108,15 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import dayjs from 'dayjs'
+import { useRouter } from 'vue-router'
 import { pageDynamicsApi, type DynamicModel } from '@/api/content'
 import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
+import { richTextToPlainText } from '@/utils/rich-text'
 import PortalNavBar from './PortalNavBar.vue'
 
+const router = useRouter()
 const loading = ref(false)
 const list = ref<DynamicModel[]>([])
 const hotList = ref<DynamicModel[]>([])
@@ -135,6 +145,10 @@ function formatTime(value: string) {
 
 function typeLabel(type: string) {
   return type === 'DYNAMIC' ? '活动动态' : '社区新闻'
+}
+
+function preview(content?: string) {
+  return richTextToPlainText(content) || '当前动态暂无内容摘要。'
 }
 
 async function load() {
@@ -267,6 +281,11 @@ onMounted(async () => {
   gap: 12px;
 }
 
+.content-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .footer {
   margin-top: 12px;
   display: flex;
@@ -289,9 +308,21 @@ onMounted(async () => {
   gap: 6px;
 }
 
-.hot-list strong {
+.hot-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1d5e43;
+  cursor: pointer;
+  font: inherit;
   font-size: 14px;
   line-height: 1.6;
+  text-align: left;
+}
+
+.hot-link:hover {
+  color: #0f3f2b;
+  text-decoration: underline;
 }
 
 .hot-list span {

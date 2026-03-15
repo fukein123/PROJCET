@@ -8,8 +8,8 @@
     >
       <template #actions>
         <el-button type="primary" @click="load">刷新活动</el-button>
-        <el-button @click="router.push('/volunteer/apply-records')">报名记录</el-button>
-        <el-button @click="router.push('/volunteer/my-favorites')">我的收藏</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.selfServiceApplications)">报名记录</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.selfServiceFavorites)">我的收藏</el-button>
       </template>
     </WorkspaceHero>
 
@@ -91,7 +91,6 @@ import SearchForm from '@/components/SearchForm.vue'
 import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
 import {
-  applyActivityApi,
   listCategoriesApi,
   pageActivitiesApi,
   type ActivityCategory,
@@ -99,6 +98,8 @@ import {
 } from '@/api/activity'
 import { createFavoriteApi } from '@/api/content'
 import { useTable } from '@/composables/useTable'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
+import { submitActivityApplicationWithUndo } from '@/utils/activity-apply'
 import { DEFAULT_ACTIVITY_COVER, getActivityStatusLabel, getActivityStatusTag } from '@/utils/display'
 import { runConfirmedAction } from '@/utils/confirmed-action'
 
@@ -138,18 +139,13 @@ function resetQuery() {
 }
 
 function toDetail(activityId: number) {
-  router.push(`/volunteer/activity-detail/${activityId}`)
+  router.push(PORTAL_PATHS.activityDetail(activityId))
 }
 
 async function apply(activityId: number) {
-  await runConfirmedAction({
-    message: '确认提交该活动的报名申请吗？',
-    title: '报名活动',
-    type: 'info',
-    confirmButtonText: '确认报名',
-    action: () => applyActivityApi(activityId),
-    successMessage: '报名申请已提交，请等待审核',
-    afterSuccess: load
+  await submitActivityApplicationWithUndo({
+    activityId,
+    refresh: load
   })
 }
 

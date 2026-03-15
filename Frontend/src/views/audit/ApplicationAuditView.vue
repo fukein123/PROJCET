@@ -13,15 +13,23 @@
     <el-table :data="list" border v-loading="loading">
       <el-table-column prop="id" label="申请 ID" width="90" />
       <el-table-column prop="activityTitle" label="活动名称" min-width="170" />
+      <el-table-column label="活动时间" min-width="220">
+        <template #default="{ row }">
+          {{ formatDateTime(row.activityStartTime) }} - {{ formatDateTime(row.activityEndTime) }}
+        </template>
+      </el-table-column>
       <el-table-column prop="username" label="账号" min-width="120" />
       <el-table-column prop="realName" label="姓名" min-width="120" />
+      <el-table-column prop="applyReason" label="报名理由" min-width="220" show-overflow-tooltip />
       <el-table-column prop="status" label="状态" width="120">
         <template #default="{ row }">
           <el-tag :type="getApplicationStatusTag(row.status)">{{ getApplicationStatusLabel(row.status) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="rejectReason" label="拒绝理由" min-width="180" />
-      <el-table-column prop="applyTime" label="申请时间" min-width="180" />
+      <el-table-column label="申请时间" min-width="180">
+        <template #default="{ row }">{{ formatDateTime(row.applyTime) }}</template>
+      </el-table-column>
       <el-table-column label="审核操作" width="220">
         <template #default="{ row }">
           <div class="audit-actions">
@@ -60,7 +68,7 @@ import { onMounted } from 'vue'
 import AdminListScaffold from '@/components/admin/AdminListScaffold.vue'
 import { auditApplicationApi, pageApplicationsApi, type ApplicationModel } from '@/api/activity'
 import { useTable } from '@/composables/useTable'
-import { getApplicationStatusLabel, getApplicationStatusTag } from '@/utils/display'
+import { formatDateTime, getApplicationStatusLabel, getApplicationStatusTag } from '@/utils/display'
 import { runConfirmedAction } from '@/utils/confirmed-action'
 
 interface ApplicationQuery {

@@ -3,17 +3,17 @@
     <WorkspaceHero
       compact
       eyebrow="报名申请"
-      title="统一查看报名审核与签到动作"
+      title="统一查看报名审核与打卡动作"
       description="在同一页面跟踪活动报名进度，并在审核通过后直接完成签到与签退操作。"
     >
       <template #actions>
         <el-button type="primary" @click="load">刷新记录</el-button>
-        <el-button @click="router.push('/volunteer/check-records')">查看打卡记录</el-button>
-        <el-button @click="router.push('/volunteer/activity-center')">返回活动中心</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.selfServiceCheckRecords)">查看打卡记录</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.activities)">返回活动中心</el-button>
       </template>
     </WorkspaceHero>
 
-    <VolunteerPageSection eyebrow="报名与审核" title="我的报名记录" description="统一查看报名审核状态、拒绝原因和打卡操作入口。">
+    <VolunteerPageSection eyebrow="报名与审核" title="我的报名记录" description="统一查看报名理由、审核状态、拒绝原因和打卡操作入口。">
       <StatePanel
         v-if="loading"
         state="loading"
@@ -25,6 +25,12 @@
         <el-table :data="list" border>
           <el-table-column prop="id" label="申请 ID" width="90" />
           <el-table-column prop="activityTitle" label="活动名称" min-width="180" />
+          <el-table-column label="活动时间" min-width="220">
+            <template #default="{ row }">
+              {{ formatDateTime(row.activityStartTime) }} - {{ formatDateTime(row.activityEndTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="applyReason" label="报名理由" min-width="220" show-overflow-tooltip />
           <el-table-column prop="realName" label="志愿者姓名" width="120" />
           <el-table-column prop="status" label="审核状态" width="120">
             <template #default="{ row }">
@@ -73,6 +79,7 @@ import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
 import VolunteerPageSection from '@/components/volunteer/VolunteerPageSection.vue'
 import { useTable } from '@/composables/useTable'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
 import { formatDateTime, getApplicationStatusLabel, getApplicationStatusTag } from '@/utils/display'
 
 interface MyApplicationQuery {

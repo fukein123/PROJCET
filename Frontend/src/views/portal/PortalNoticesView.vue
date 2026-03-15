@@ -29,12 +29,16 @@
           title="正在加载公告"
           description="正在同步平台最新公告内容。"
         />
-        <el-collapse v-else-if="list.length">
-          <el-collapse-item v-for="item in list" :key="item.id" :title="item.title" :name="item.id">
-            <p>{{ item.content }}</p>
-            <small>{{ formatTime(item.publishTime) }}</small>
-          </el-collapse-item>
-        </el-collapse>
+        <div v-else-if="list.length" class="notice-list">
+          <article v-for="item in list" :key="item.id" class="notice-item">
+            <div class="notice-copy">
+              <h3>{{ item.title }}</h3>
+              <p>{{ preview(item.content) }}</p>
+              <small>{{ formatTime(item.publishTime) }}</small>
+            </div>
+            <el-button type="primary" plain @click="router.push(PORTAL_PATHS.noticeDetail(item.id))">查看详情</el-button>
+          </article>
+        </div>
         <StatePanel
           v-else
           tone="portal"
@@ -49,16 +53,24 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import dayjs from 'dayjs'
+import { useRouter } from 'vue-router'
 import { pageNoticesApi, type NoticeModel } from '@/api/content'
 import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
+import { richTextToPlainText } from '@/utils/rich-text'
 import PortalNavBar from './PortalNavBar.vue'
 
+const router = useRouter()
 const loading = ref(false)
 const list = ref<NoticeModel[]>([])
 
 function formatTime(value: string) {
   return dayjs(value).format('YYYY-MM-DD HH:mm')
+}
+
+function preview(content?: string) {
+  return richTextToPlainText(content) || '当前公告暂无内容摘要。'
 }
 
 async function load() {
@@ -106,13 +118,44 @@ onMounted(load)
   margin-bottom: 0;
 }
 
-p {
+.notice-list {
+  display: grid;
+  gap: 12px;
+}
+
+.notice-item {
+  border: 1px solid var(--cvs-border);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.notice-copy h3,
+.notice-copy p {
   margin-top: 0;
+}
+
+.notice-copy h3 {
+  margin-bottom: 8px;
+  font-size: 20px;
+}
+
+.notice-copy p {
+  margin-bottom: 8px;
   color: var(--cvs-text-sub);
   line-height: 1.8;
 }
 
 small {
   color: #8d9a94;
+}
+
+@media (max-width: 760px) {
+  .notice-item {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

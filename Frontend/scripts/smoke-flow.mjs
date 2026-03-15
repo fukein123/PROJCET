@@ -492,7 +492,13 @@ async function toggleRowSelection(row) {
   await checkbox.click()
 }
 
-async function confirmDialog(page) {
+async function confirmDialog(page, promptValue) {
+  if (promptValue !== undefined) {
+    const promptInput = page.locator('.el-message-box__input textarea, .el-message-box__input input').first()
+    await promptInput.waitFor({ state: 'visible', timeout: 8000 })
+    await promptInput.fill(promptValue)
+  }
+
   const confirmButton = page.locator('.el-message-box__btns .el-button--primary').last()
   await confirmButton.waitFor({ state: 'visible', timeout: 8000 })
   await confirmButton.click()
@@ -500,6 +506,7 @@ async function confirmDialog(page) {
 
 async function applyPreparedActivity(page, activityId, previousToast = '') {
   await page.goto(`${baseUrl}/portal/activities?apply=${activityId}`, { waitUntil: 'domcontentloaded' })
+  await confirmDialog(page, 'Smoke test volunteer is available for the full activity window')
   return readToast(page, previousToast)
 }
 

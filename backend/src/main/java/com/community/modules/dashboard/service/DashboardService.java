@@ -1,5 +1,6 @@
 package com.community.modules.dashboard.service;
 
+import com.community.modules.audit.service.AdminOperationLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -13,16 +14,21 @@ import java.util.Map;
 public class DashboardService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final AdminOperationLogService adminOperationLogService;
 
     public Map<String, Object> adminDashboard() {
         Map<String, Object> result = new HashMap<>();
-        result.put("activityCount", queryCount("select count(1) from activity"));
-        result.put("postCount", queryCount("select count(1) from forum_post"));
+        result.put("activityCount", queryCount("select count(1) from activity where status <> 'ARCHIVED' or status is null"));
+        result.put("postCount", queryCount("select count(1) from forum_post where status = 'APPROVED'"));
         result.put("commentCount", queryCount("select count(1) from comment_info where status=1"));
-        result.put("volunteerCount", queryCount("select count(1) from sys_user where role='VOLUNTEER'"));
+        result.put("volunteerCount", queryCount("select count(1) from sys_user where role='VOLUNTEER' and status=1"));
+        result.put("orderCount", queryCount("select count(1) from exchange_order where status is null or status <> 'CANCELLED'"));
+        result.put("pendingApplicationCount", queryCount("select count(1) from activity_application where status='PENDING'"));
+        result.put("pendingPostCount", queryCount("select count(1) from forum_post where status='PENDING'"));
         result.put("weeklyApplicationTrend", weeklyApplicationTrend());
         result.put("activityTypeBar", activityTypeDistribution());
         result.put("postTypePie", postTypeDistribution());
+        result.put("recentOperationLogs", adminOperationLogService.listRecent(8));
         return result;
     }
 
@@ -46,6 +52,7 @@ public class DashboardService {
                 select c.name as name, count(a.id) as value
                 from activity_category c
                 left join activity a on a.category_id = c.id
+                    and (a.status <> 'ARCHIVED' or a.status is null)
                 group by c.id, c.name
                 order by c.sort asc, c.id asc
                 """);

@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "smoke:check": "node --check scripts/smoke-flow.mjs",
     "smoke": "node scripts/smoke-flow.mjs",
+    "smoke:forum": "node scripts/forum-flow-smoke.mjs",
     "visual:baseline": "node scripts/visual-baseline.mjs",
     "verify:ui": "npm run build && npm run test:unit && npm run smoke:check && npm run smoke && npm run visual:baseline"
   },

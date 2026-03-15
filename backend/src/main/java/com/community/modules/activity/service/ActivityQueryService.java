@@ -50,6 +50,7 @@ public class ActivityQueryService {
         if (!includeArchived) {
             wrapper.ne(Activity::getStatus, "ARCHIVED");
         }
+
         PageHelper.startPage((int) current, (int) size);
         List<Activity> records = activityMapper.selectList(wrapper);
         PageInfo<Activity> pageInfo = new PageInfo<>(records);
@@ -59,18 +60,26 @@ public class ActivityQueryService {
     public Activity detail(Long id) {
         Activity activity = activityMapper.selectById(id);
         if (activity == null) {
-            throw new BusinessException(404, "活动不存在");
+            throw new BusinessException(404, "Activity not found");
+        }
+        if ("ARCHIVED".equalsIgnoreCase(activity.getStatus()) && !"ADMIN".equalsIgnoreCase(SecurityUtil.currentRole())) {
+            throw new BusinessException(404, "Activity not found");
         }
         return activity;
     }
 
-    public PageResult<ActivityApplicationView> pageApplications(long current, long size, Long activityId, String status, boolean onlyMine) {
+    public PageResult<ActivityApplicationView> pageApplications(long current,
+                                                                long size,
+                                                                Long activityId,
+                                                                String status,
+                                                                boolean onlyMine) {
         Long currentUserId = SecurityUtil.currentUserId();
         LambdaQueryWrapper<ActivityApplication> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(activityId != null, ActivityApplication::getActivityId, activityId)
                 .eq(StringUtils.hasText(status), ActivityApplication::getStatus, status)
                 .eq(onlyMine && currentUserId != null, ActivityApplication::getUserId, currentUserId)
                 .orderByDesc(ActivityApplication::getApplyTime);
+
         PageHelper.startPage((int) current, (int) size);
         List<ActivityApplication> records = applicationMapper.selectList(wrapper);
         PageInfo<ActivityApplication> pageInfo = new PageInfo<>(records);
@@ -100,15 +109,20 @@ public class ActivityQueryService {
             view.setId(record.getId());
             view.setActivityId(record.getActivityId());
             view.setUserId(record.getUserId());
+            view.setApplyReason(record.getApplyReason());
             view.setStatus(record.getStatus());
             view.setRejectReason(record.getRejectReason());
             view.setApplyTime(record.getApplyTime());
             view.setAuditTime(record.getAuditTime());
             view.setAuditorId(record.getAuditorId());
+
             Activity activity = activityMap.get(record.getActivityId());
             if (activity != null) {
                 view.setActivityTitle(activity.getTitle());
+                view.setActivityStartTime(activity.getStartTime());
+                view.setActivityEndTime(activity.getEndTime());
             }
+
             User user = userMap.get(record.getUserId());
             if (user != null) {
                 view.setUsername(user.getUsername());
@@ -120,6 +134,43 @@ public class ActivityQueryService {
         return new PageResult<>(pageInfo.getTotal(), current, size, views);
     }
 
+    public PageResult<CheckRecordView> pageCheckRecords(long current,
+                                                        long size,
+                                                        Long activityId,
+                                                        Long userId,
+                                                        String status,
+                                                        String keyword) {
+        LambdaQueryWrapper<ActivityCheckRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(activityId != null, ActivityCheckRecord::getActivityId, activityId)
+                .eq(userId != null, ActivityCheckRecord::getUserId, userId)
+                .eq(StringUtils.hasText(status), ActivityCheckRecord::getStatus, status)
+                .orderByDesc(ActivityCheckRecord::getCreateTime);
+
+        if (StringUtils.hasText(keyword)) {
+            List<Long> matchedActivityIds = searchActivityIds(keyword);
+            List<Long> matchedUserIds = searchUserIds(keyword);
+            if (matchedActivityIds.isEmpty() && matchedUserIds.isEmpty()) {
+                return new PageResult<>(0, current, size, List.of());
+            }
+
+            wrapper.and(nested -> {
+                if (!matchedActivityIds.isEmpty()) {
+                    nested.in(ActivityCheckRecord::getActivityId, matchedActivityIds);
+                    if (!matchedUserIds.isEmpty()) {
+                        nested.or().in(ActivityCheckRecord::getUserId, matchedUserIds);
+                    }
+                } else {
+                    nested.in(ActivityCheckRecord::getUserId, matchedUserIds);
+                }
+            });
+        }
+
+        PageHelper.startPage((int) current, (int) size);
+        List<ActivityCheckRecord> records = checkRecordMapper.selectList(wrapper);
+        PageInfo<ActivityCheckRecord> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, buildCheckRecordViews(records));
+    }
+
     public PageResult<CheckRecordView> myCheckRecords(long current, long size) {
         Long userId = SecurityUtil.currentUserId();
         PageHelper.startPage((int) current, (int) size);
@@ -127,6 +178,32 @@ public class ActivityQueryService {
                 .eq(ActivityCheckRecord::getUserId, userId)
                 .orderByDesc(ActivityCheckRecord::getCreateTime));
         PageInfo<ActivityCheckRecord> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, buildCheckRecordViews(records));
+    }
+
+    private List<Long> searchActivityIds(String keyword) {
+        return activityMapper.selectList(new LambdaQueryWrapper<Activity>()
+                        .select(Activity::getId)
+                        .like(Activity::getTitle, keyword))
+                .stream()
+                .map(Activity::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private List<Long> searchUserIds(String keyword) {
+        return userMapper.selectList(new LambdaQueryWrapper<User>()
+                        .select(User::getId)
+                        .and(wrapper -> wrapper.like(User::getUsername, keyword).or().like(User::getRealName, keyword)))
+                .stream()
+                .map(User::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private List<CheckRecordView> buildCheckRecordViews(List<ActivityCheckRecord> records) {
         List<Long> activityIds = records.stream()
                 .map(ActivityCheckRecord::getActivityId)
                 .filter(Objects::nonNull)
@@ -138,11 +215,22 @@ public class ActivityQueryService {
             activities.forEach(item -> activityMap.put(item.getId(), item));
         }
 
+        List<Long> userIds = records.stream()
+                .map(ActivityCheckRecord::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            userMapper.selectBatchIds(userIds).forEach(item -> userMap.put(item.getId(), item));
+        }
+
         List<CheckRecordView> views = records.stream().map(record -> {
             Activity activity = activityMap.get(record.getActivityId());
             CheckRecordView view = new CheckRecordView();
             view.setId(record.getId());
             view.setActivityId(record.getActivityId());
+            view.setUserId(record.getUserId());
             view.setSignInTime(record.getSignInTime());
             view.setSignOutTime(record.getSignOutTime());
             view.setSignInDistance(record.getSignInDistance());
@@ -154,11 +242,15 @@ public class ActivityQueryService {
                 view.setActivityStartTime(activity.getStartTime());
                 view.setActivityEndTime(activity.getEndTime());
             }
+            User user = userMap.get(record.getUserId());
+            if (user != null) {
+                view.setUsername(user.getUsername());
+                view.setRealName(user.getRealName());
+            }
             view.setServiceMinutes(calculateServiceMinutes(record.getSignInTime(), record.getSignOutTime()));
             return view;
         }).toList();
-
-        return new PageResult<>(pageInfo.getTotal(), current, size, views);
+        return views;
     }
 
     private Long calculateServiceMinutes(LocalDateTime signInTime, LocalDateTime signOutTime) {

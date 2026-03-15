@@ -23,6 +23,7 @@ public class Activity extends BaseEntity {
     private String status;
     private Integer targetCount;
     private Integer volunteerQuota;
+    private Integer pointReward;
     private String content;
     private String description;
     private String coverImage;

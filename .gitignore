@@ -21,6 +21,7 @@ Frontend/dist/
 Frontend/.vite/
 Frontend/.cache/
 Frontend/.env.local
+Frontend/output/playwright/
 
 # Legacy spec-workflow runtime
 .spec-workflow/approvals/
@@ -30,5 +31,11 @@ Frontend/.env.local
 .approval-workflow/archive/
 
 # Misc
+.playwright-cli/
+tmp/
+backend/uploads/
+artifacts/*.jar
+artifacts/*.jar.original
+artifacts/frontend-dist/
 *.tmp
 *.swp

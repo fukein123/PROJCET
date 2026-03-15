@@ -7,11 +7,10 @@
         compact
         eyebrow="志愿活动广场"
         title="按分类和关键词快速筛选社区志愿活动"
-        description="统一展示活动状态、服务时间、地点与详细说明；登录后即可报名、收藏并继续进入论坛交流。"
+        description="统一展示活动状态、服务时间、地点与详细说明；登录后即可在当前活动链路内完成报名和收藏。"
       >
         <template #actions>
           <el-button type="primary" @click="load">刷新活动</el-button>
-          <el-button @click="router.push('/portal/forum')">去论坛交流</el-button>
         </template>
       </WorkspaceHero>
 
@@ -80,16 +79,16 @@
                 <span>目标人数：</span>
                 <strong>{{ item.targetCount }}</strong>
               </div>
-              <p class="desc">{{ item.description || '当前活动暂无详细说明。' }}</p>
-              <el-collapse>
-                <el-collapse-item title="查看详细说明" :name="String(item.id)">
-                  <p class="detail">{{ item.description || '暂无详细说明' }}</p>
-                </el-collapse-item>
-              </el-collapse>
+              <div class="line">
+                <span>活动积分：</span>
+                <strong>{{ item.pointReward ?? 0 }}</strong>
+              </div>
+              <p class="desc">{{ item.content || '当前活动暂无详细说明。' }}</p>
+              <p class="detail">{{ detailPreview(item.description) }}</p>
               <div class="actions">
+                <el-button plain @click="router.push(PORTAL_PATHS.activityDetail(item.id))">查看详情</el-button>
                 <el-button type="primary" @click="apply(item.id)">立即报名</el-button>
                 <el-button type="warning" plain @click="collect(item.id)">收藏活动</el-button>
-                <el-button @click="router.push('/portal/forum')">去论坛交流</el-button>
               </div>
             </div>
           </article>
@@ -119,19 +118,16 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  applyActivityApi,
-  listCategoriesApi,
-  pageActivitiesApi,
-  type ActivityCategory,
-  type ActivityModel
-} from '@/api/activity'
+import { listCategoriesApi, pageActivitiesApi, type ActivityCategory, type ActivityModel } from '@/api/activity'
 import { createFavoriteApi } from '@/api/content'
 import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
 import { usePortalNavigation } from '@/composables/usePortalNavigation'
 import { useUserStore } from '@/stores/userStore'
+import { submitActivityApplicationWithUndo } from '@/utils/activity-apply'
 import { formatDateTime, getActivityStatusLabel, getActivityStatusTag } from '@/utils/display'
+import { richTextToPlainText } from '@/utils/rich-text'
 import PortalNavBar from './PortalNavBar.vue'
 
 const route = useRoute()
@@ -161,6 +157,10 @@ const coverList = [
 
 function coverFor(id: number) {
   return coverList[id % coverList.length]
+}
+
+function detailPreview(value?: string) {
+  return richTextToPlainText(value) || '暂无详细说明。'
 }
 
 async function load() {
@@ -205,10 +205,12 @@ async function apply(activityId: number) {
         ElMessage.warning('请使用志愿者账号登录后报名活动')
         return
       }
-      await applyActivityApi(activityId)
-      ElMessage.success('报名申请已提交，请等待管理员审核')
+      await submitActivityApplicationWithUndo({
+        activityId,
+        refresh: load
+      })
     },
-    `/portal/activities?apply=${activityId}`
+    `${PORTAL_PATHS.activities}?apply=${activityId}`
   )
 }
 
@@ -222,7 +224,7 @@ async function collect(activityId: number) {
       await createFavoriteApi({ activityId })
       ElMessage.success('已加入收藏')
     },
-    '/portal/activities'
+    PORTAL_PATHS.activities
   )
 }
 
@@ -236,8 +238,11 @@ async function handleAutoApply() {
   }
 
   hasAppliedFromQuery.value = true
-  await apply(applyId)
-  router.replace('/portal/activities')
+  try {
+    await apply(applyId)
+  } finally {
+    router.replace(PORTAL_PATHS.activities)
+  }
 }
 
 onMounted(async () => {
@@ -383,8 +388,12 @@ onMounted(async () => {
 .detail {
   margin: 0;
   color: #3f4f4a;
-  line-height: 1.8;
+  line-height: 1.75;
   white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .actions {

@@ -46,6 +46,7 @@ const request: AxiosInstance = axios.create({
 })
 
 request.interceptors.request.use((config) => {
+  config.url = normalizeRequestUrl(config.baseURL, config.url)
   const token = getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -84,6 +85,27 @@ function rejectApiFailure(payload?: ApiFailurePayload, status?: number, error?: 
 
   ElMessage.error(message)
   return Promise.reject(new ApiRequestError(message, { code, status }))
+}
+
+function normalizeRequestUrl(baseURL?: string, requestUrl?: string) {
+  if (!requestUrl) {
+    return requestUrl
+  }
+
+  const normalizedBase = (baseURL || '').replace(/\/+$/, '')
+  if (!normalizedBase.endsWith('/api')) {
+    return requestUrl
+  }
+
+  if (requestUrl.startsWith('/api/')) {
+    return requestUrl.slice(4)
+  }
+
+  if (requestUrl === '/api') {
+    return '/'
+  }
+
+  return requestUrl
 }
 
 function resolveErrorMessage(

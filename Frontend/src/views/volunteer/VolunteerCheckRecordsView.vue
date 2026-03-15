@@ -8,8 +8,8 @@
     >
       <template #actions>
         <el-button type="primary" @click="load">刷新记录</el-button>
-        <el-button @click="router.push('/volunteer/apply-records')">查看报名申请</el-button>
-        <el-button @click="router.push('/volunteer/profile')">前往个人中心</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.selfServiceApplications)">查看报名申请</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.selfServiceProfile)">前往个人中心</el-button>
       </template>
     </WorkspaceHero>
 
@@ -70,6 +70,7 @@ import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
 import VolunteerPageSection from '@/components/volunteer/VolunteerPageSection.vue'
 import { useTable } from '@/composables/useTable'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
 import { formatDateTime, getCheckRecordStatusLabel, getCheckRecordStatusTag, toServiceHours } from '@/utils/display'
 
 interface CheckRecordQuery {

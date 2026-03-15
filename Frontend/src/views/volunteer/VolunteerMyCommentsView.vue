@@ -8,8 +8,8 @@
     >
       <template #actions>
         <el-button type="primary" @click="load">刷新评论</el-button>
-        <el-button @click="router.push('/volunteer/my-posts')">查看我的帖子</el-button>
-        <el-button @click="router.push('/volunteer/activity-center')">前往活动中心</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.selfServicePosts)">查看我的帖子</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.activities)">前往活动中心</el-button>
       </template>
     </WorkspaceHero>
 
@@ -27,7 +27,9 @@
             <template #default="{ row }">{{ getCommentTargetLabel(row.targetType) }}</template>
           </el-table-column>
           <el-table-column prop="targetId" label="关联 ID" width="100" />
-          <el-table-column prop="content" label="内容" min-width="260" />
+          <el-table-column label="内容" min-width="260">
+            <template #default="{ row }">{{ commentPreview(row.content) }}</template>
+          </el-table-column>
           <el-table-column label="时间" min-width="180">
             <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
           </el-table-column>
@@ -62,7 +64,9 @@ import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
 import VolunteerPageSection from '@/components/volunteer/VolunteerPageSection.vue'
 import { useTable } from '@/composables/useTable'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
 import { formatDateTime, getCommentTargetLabel } from '@/utils/display'
+import { richTextToPlainText } from '@/utils/rich-text'
 
 interface MyCommentQuery {
   current: number
@@ -83,6 +87,10 @@ const { loading, records: list, total, query, load, handlePage } = useTable<Comm
       onlyMine: true
     })
 })
+
+function commentPreview(content?: string) {
+  return richTextToPlainText(content) || '图片或富文本评论'
+}
 
 onMounted(load)
 </script>

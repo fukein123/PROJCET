@@ -6,12 +6,17 @@ import com.community.common.web.ApiResponse;
 import com.community.common.web.PageResult;
 import com.community.modules.content.dto.FavoriteRequest;
 import com.community.modules.content.dto.FavoriteUpdateRequest;
+import com.community.modules.content.dto.ExchangeOrderCreateRequest;
+import com.community.modules.content.dto.ExchangeOrderStatusRequest;
+import com.community.modules.content.dto.MallProductRequest;
 import com.community.modules.content.entity.BannerInfo;
 import com.community.modules.content.entity.CommentInfo;
+import com.community.modules.content.entity.ExchangeOrder;
 import com.community.modules.content.entity.FavoriteActivity;
 import com.community.modules.content.entity.ForumCategory;
 import com.community.modules.content.entity.ForumPost;
 import com.community.modules.content.entity.InfoDynamic;
+import com.community.modules.content.entity.MallProduct;
 import com.community.modules.content.entity.NoticeInfo;
 import com.community.modules.content.service.ContentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -66,6 +71,12 @@ public class ContentController {
         return ApiResponse.success(contentService.pageDynamics(current, size, type, keyword, onlyPublished));
     }
 
+    @Operation(summary = "Dynamic detail")
+    @GetMapping("/dynamics/{id}")
+    public ApiResponse<InfoDynamic> detailDynamic(@PathVariable Long id) {
+        return ApiResponse.success(contentService.detailDynamic(id));
+    }
+
     @Operation(summary = "Admin - create dynamic")
     @PostMapping("/dynamics")
     @PreAuthorize("hasRole('ADMIN')")
@@ -82,20 +93,20 @@ public class ContentController {
         return ApiResponse.success("updated", null);
     }
 
-    @Operation(summary = "Admin - delete dynamic")
+    @Operation(summary = "Admin - archive dynamic (delete alias)")
     @DeleteMapping("/dynamics/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deleteDynamic(@PathVariable Long id) {
         contentService.deleteDynamic(id);
-        return ApiResponse.success("deleted", null);
+        return ApiResponse.success("archived", null);
     }
 
-    @Operation(summary = "Admin - batch delete dynamics")
+    @Operation(summary = "Admin - batch archive dynamics (delete alias)")
     @PostMapping("/dynamics/batch-delete")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> batchDeleteDynamics(@Valid @RequestBody IdListRequest request) {
         contentService.batchDeleteDynamics(request.getIds());
-        return ApiResponse.success("batch deleted", null);
+        return ApiResponse.success("batch archived", null);
     }
 
     @Operation(summary = "Admin - batch archive dynamics")
@@ -122,6 +133,12 @@ public class ContentController {
         return ApiResponse.success(contentService.pageNotices(current, size, onlyPublished));
     }
 
+    @Operation(summary = "Notice detail")
+    @GetMapping("/notices/{id}")
+    public ApiResponse<NoticeInfo> detailNotice(@PathVariable Long id) {
+        return ApiResponse.success(contentService.detailNotice(id));
+    }
+
     @Operation(summary = "Admin - create notice")
     @PostMapping("/notices")
     @PreAuthorize("hasRole('ADMIN')")
@@ -138,20 +155,20 @@ public class ContentController {
         return ApiResponse.success("updated", null);
     }
 
-    @Operation(summary = "Admin - delete notice")
+    @Operation(summary = "Admin - archive notice (delete alias)")
     @DeleteMapping("/notices/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deleteNotice(@PathVariable Long id) {
         contentService.deleteNotice(id);
-        return ApiResponse.success("deleted", null);
+        return ApiResponse.success("archived", null);
     }
 
-    @Operation(summary = "Admin - batch delete notices")
+    @Operation(summary = "Admin - batch archive notices (delete alias)")
     @PostMapping("/notices/batch-delete")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> batchDeleteNotices(@Valid @RequestBody IdListRequest request) {
         contentService.batchDeleteNotices(request.getIds());
-        return ApiResponse.success("batch deleted", null);
+        return ApiResponse.success("batch archived", null);
     }
 
     @Operation(summary = "Admin - batch archive notices")
@@ -174,6 +191,13 @@ public class ContentController {
     @GetMapping("/banners")
     public ApiResponse<List<BannerInfo>> banners() {
         return ApiResponse.success(contentService.listBanners());
+    }
+
+    @Operation(summary = "Admin - list banners")
+    @GetMapping("/admin/banners")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<BannerInfo>> adminBanners() {
+        return ApiResponse.success(contentService.listBannersForAdmin());
     }
 
     @Operation(summary = "Admin - create banner")
@@ -212,6 +236,13 @@ public class ContentController {
     @GetMapping("/forum/categories")
     public ApiResponse<List<ForumCategory>> forumCategories() {
         return ApiResponse.success(contentService.listForumCategories());
+    }
+
+    @Operation(summary = "Admin - list forum categories")
+    @GetMapping("/admin/forum/categories")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<ForumCategory>> adminForumCategories() {
+        return ApiResponse.success(contentService.listForumCategoriesForAdmin());
     }
 
     @Operation(summary = "Admin - create forum category")
@@ -257,12 +288,33 @@ public class ContentController {
         return ApiResponse.success(contentService.pageForumPosts(current, size, keyword, status, onlyMine, onlyApproved));
     }
 
+    @Operation(summary = "Forum post detail")
+    @GetMapping("/forum/posts/{id}")
+    public ApiResponse<ForumPost> detailForumPost(@PathVariable Long id) {
+        return ApiResponse.success(contentService.detailForumPost(id));
+    }
+
     @Operation(summary = "Volunteer - create/update my post")
     @PostMapping("/forum/posts/my")
     @PreAuthorize("hasRole('VOLUNTEER')")
-    public ApiResponse<Void> saveOrUpdateMyPost(@RequestBody ForumPost post) {
-        contentService.saveOrUpdateMyPost(post);
-        return ApiResponse.success("saved", null);
+    public ApiResponse<ForumPost> saveOrUpdateMyPost(@RequestBody ForumPost post) {
+        return ApiResponse.success("saved", contentService.saveOrUpdateMyPost(post));
+    }
+
+    @Operation(summary = "Volunteer - undo my submitted post")
+    @DeleteMapping("/forum/posts/my/{id}/undo")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<Void> undoMyPost(@PathVariable Long id) {
+        contentService.undoMyPostSubmit(id);
+        return ApiResponse.success("undone", null);
+    }
+
+    @Operation(summary = "Admin - update forum post")
+    @PutMapping("/forum/posts/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> updateForumPost(@PathVariable Long id, @RequestBody ForumPost post) {
+        contentService.updateForumPost(id, post);
+        return ApiResponse.success("updated", null);
     }
 
     @Operation(summary = "Admin - audit post")
@@ -275,20 +327,20 @@ public class ContentController {
         return ApiResponse.success("audited", null);
     }
 
-    @Operation(summary = "Admin - delete post")
+    @Operation(summary = "Admin - archive post (delete alias)")
     @DeleteMapping("/forum/posts/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deletePost(@PathVariable Long id) {
         contentService.deleteForumPost(id);
-        return ApiResponse.success("deleted", null);
+        return ApiResponse.success("archived", null);
     }
 
-    @Operation(summary = "Admin - batch delete posts")
+    @Operation(summary = "Admin - batch archive posts (delete alias)")
     @PostMapping("/forum/posts/batch-delete")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> batchDeletePosts(@Valid @RequestBody IdListRequest request) {
         contentService.batchDeleteForumPosts(request.getIds());
-        return ApiResponse.success("batch deleted", null);
+        return ApiResponse.success("batch archived", null);
     }
 
     @Operation(summary = "Create comment")
@@ -421,5 +473,124 @@ public class ContentController {
     public ApiResponse<Void> removeFavorite(@PathVariable Long activityId) {
         contentService.removeFavorite(activityId);
         return ApiResponse.success("removed", null);
+    }
+
+    @Operation(summary = "Page mall products")
+    @GetMapping("/mall-products/page")
+    public ApiResponse<PageResult<MallProduct>> pageMallProducts(@RequestParam(defaultValue = "1") long current,
+                                                                 @RequestParam(defaultValue = "10") long size,
+                                                                 @RequestParam(required = false) String keyword,
+                                                                 @RequestParam(required = false) Integer status,
+                                                                 @RequestParam(defaultValue = "true") boolean onlyEnabled) {
+        return ApiResponse.success(contentService.pageMallProducts(current, size, keyword, status, onlyEnabled));
+    }
+
+    @Operation(summary = "Admin - page mall products")
+    @GetMapping("/admin/mall-products/page")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<PageResult<MallProduct>> pageAdminMallProducts(@RequestParam(defaultValue = "1") long current,
+                                                                      @RequestParam(defaultValue = "10") long size,
+                                                                      @RequestParam(required = false) String keyword,
+                                                                      @RequestParam(required = false) Integer status) {
+        return ApiResponse.success(contentService.pageMallProducts(current, size, keyword, status, false));
+    }
+
+    @Operation(summary = "Admin - create mall product")
+    @PostMapping("/mall-products")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> saveMallProduct(@Valid @RequestBody MallProductRequest request) {
+        contentService.saveMallProduct(request);
+        return ApiResponse.success("created", null);
+    }
+
+    @Operation(summary = "Admin - update mall product")
+    @PutMapping("/mall-products/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> updateMallProduct(@PathVariable Long id, @Valid @RequestBody MallProductRequest request) {
+        contentService.updateMallProduct(id, request);
+        return ApiResponse.success("updated", null);
+    }
+
+    @Operation(summary = "Admin - disable mall product")
+    @DeleteMapping("/mall-products/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> disableMallProduct(@PathVariable Long id) {
+        contentService.disableMallProduct(id);
+        return ApiResponse.success("disabled", null);
+    }
+
+    @Operation(summary = "Admin - enable mall product")
+    @PutMapping("/mall-products/{id}/enable")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> enableMallProduct(@PathVariable Long id) {
+        contentService.enableMallProduct(id);
+        return ApiResponse.success("enabled", null);
+    }
+
+    @Operation(summary = "Admin - batch disable mall products")
+    @PostMapping("/mall-products/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchDisableMallProducts(@Valid @RequestBody IdListRequest request) {
+        contentService.batchDisableMallProducts(request.getIds());
+        return ApiResponse.success("batch disabled", null);
+    }
+
+    @Operation(summary = "Admin - batch enable mall products")
+    @PostMapping("/mall-products/batch-enable")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> batchEnableMallProducts(@Valid @RequestBody IdListRequest request) {
+        contentService.batchEnableMallProducts(request.getIds());
+        return ApiResponse.success("batch enabled", null);
+    }
+
+    @Operation(summary = "Volunteer - page exchange orders")
+    @GetMapping("/orders/page")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<PageResult<ExchangeOrder>> pageMyExchangeOrders(@RequestParam(defaultValue = "1") long current,
+                                                                       @RequestParam(defaultValue = "10") long size,
+                                                                       @RequestParam(required = false) String status) {
+        return ApiResponse.success(contentService.pageMyExchangeOrders(current, size, status));
+    }
+
+    @Operation(summary = "Volunteer - create exchange order")
+    @PostMapping("/orders")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<ExchangeOrder> createExchangeOrder(@Valid @RequestBody ExchangeOrderCreateRequest request) {
+        return ApiResponse.success("created", contentService.createExchangeOrder(request));
+    }
+
+    @Operation(summary = "Admin - page exchange orders")
+    @GetMapping("/admin/orders/page")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<PageResult<ExchangeOrder>> pageAdminExchangeOrders(@RequestParam(defaultValue = "1") long current,
+                                                                          @RequestParam(defaultValue = "10") long size,
+                                                                          @RequestParam(required = false) String orderNo,
+                                                                          @RequestParam(required = false) String productKeyword,
+                                                                          @RequestParam(required = false) String userKeyword,
+                                                                          @RequestParam(required = false) String status) {
+        return ApiResponse.success(contentService.pageAdminExchangeOrders(
+                current,
+                size,
+                orderNo,
+                productKeyword,
+                userKeyword,
+                status
+        ));
+    }
+
+    @Operation(summary = "Admin - exchange order detail")
+    @GetMapping("/admin/orders/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<ExchangeOrder> detailAdminExchangeOrder(@PathVariable Long id) {
+        return ApiResponse.success(contentService.detailAdminExchangeOrder(id));
+    }
+
+    @Operation(summary = "Admin - update exchange order status")
+    @PutMapping("/orders/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> updateExchangeOrderStatus(@PathVariable Long id,
+                                                       @Valid @RequestBody ExchangeOrderStatusRequest request) {
+        contentService.updateExchangeOrderStatus(id, request);
+        return ApiResponse.success("updated", null);
     }
 }

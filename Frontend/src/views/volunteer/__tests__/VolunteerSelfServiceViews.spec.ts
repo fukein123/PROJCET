@@ -9,17 +9,24 @@ import VolunteerMyPostsView from '../VolunteerMyPostsView.vue'
 import VolunteerProfileView from '../VolunteerProfileView.vue'
 
 const pushMock = vi.fn()
+const routeQuery = ref<Record<string, unknown>>({})
 const useTableMock = vi.fn()
 const getMyProfileApi = vi.fn()
+const getMyCertificationApi = vi.fn()
+const submitMyCertificationApi = vi.fn()
 const updateMyProfileApi = vi.fn()
 const updatePasswordApi = vi.fn()
 const pageActivitiesApi = vi.fn()
 const listForumCategoriesApi = vi.fn()
+const uploadImageApi = vi.fn()
 const runConfirmedAction = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: pushMock
+  }),
+  useRoute: () => ({
+    query: routeQuery.value
   })
 }))
 
@@ -48,6 +55,8 @@ vi.mock('@/utils/confirmed-action', () => ({
 
 vi.mock('@/api/user', () => ({
   getMyProfileApi: (...args: unknown[]) => getMyProfileApi(...args),
+  getMyCertificationApi: (...args: unknown[]) => getMyCertificationApi(...args),
+  submitMyCertificationApi: (...args: unknown[]) => submitMyCertificationApi(...args),
   updateMyProfileApi: (...args: unknown[]) => updateMyProfileApi(...args),
   updatePasswordApi: (...args: unknown[]) => updatePasswordApi(...args)
 }))
@@ -58,6 +67,10 @@ vi.mock('@/api/activity', () => ({
   pageActivitiesApi: (...args: unknown[]) => pageActivitiesApi(...args),
   signInApi: vi.fn(),
   signOutApi: vi.fn()
+}))
+
+vi.mock('@/api/common', () => ({
+  uploadImageApi: (...args: unknown[]) => uploadImageApi(...args)
 }))
 
 vi.mock('@/api/content', () => ({
@@ -176,6 +189,9 @@ function mountView(component: object) {
         'el-option': {
           template: '<option><slot /></option>'
         },
+        'el-upload': {
+          template: '<div class="upload-stub"><slot /></div>'
+        },
         'el-table': {
           template: '<div class="table-stub"><slot /></div>'
         },
@@ -205,8 +221,20 @@ describe('Volunteer self-service views', () => {
       phone: '13900000000',
       gender: 'UNKNOWN',
       avatar: '',
+      points: 18,
       certified: 1
     })
+    getMyCertificationApi.mockResolvedValue({
+      userId: 1,
+      realName: '志愿者甲',
+      idCardNo: '330101199001011234',
+      idCardFrontUrl: 'https://example.com/id-front.jpg',
+      idCardBackUrl: 'https://example.com/id-back.jpg',
+      status: 'APPROVED',
+      submitTime: '2026-03-13 09:00:00',
+      auditTime: '2026-03-13 12:00:00'
+    })
+    submitMyCertificationApi.mockResolvedValue(undefined)
     updateMyProfileApi.mockResolvedValue(undefined)
     updatePasswordApi.mockResolvedValue(undefined)
     pageActivitiesApi.mockResolvedValue({
@@ -223,17 +251,54 @@ describe('Volunteer self-service views', () => {
     })
     listForumCategoriesApi.mockResolvedValue([{ id: 1, name: '志愿心得' }])
     runConfirmedAction.mockResolvedValue(undefined)
+    routeQuery.value = {}
   })
 
-  it('renders profile hero and form actions', async () => {
+  it('renders profile hero and switches locked certification to readonly display', async () => {
     const wrapper = mountView(VolunteerProfileView)
     await flushPromises()
 
     expect(getMyProfileApi).toHaveBeenCalledTimes(1)
-    expect(wrapper.text()).toContain('统一维护个人资料与账户安全')
+    expect(getMyCertificationApi).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('统一维护个人资料、认证状态与账户安全')
     expect(wrapper.text()).toContain('查看报名记录')
-    expect(wrapper.text()).toContain('保存资料')
-    expect(wrapper.text()).toContain('更新密码')
+    expect(wrapper.text()).toContain('编辑资料')
+    expect(wrapper.text()).toContain('当前为只读展示')
+    expect(wrapper.text()).toContain('认证已通过')
+    expect(wrapper.text()).not.toContain('提交认证')
+  })
+
+  it('updates profile only after entering edit mode', async () => {
+    const wrapper = mountView(VolunteerProfileView)
+    await flushPromises()
+
+    const setupState = (wrapper.vm as any).$.setupState as {
+      profileEditing: boolean
+      profileDraft: { username: string; realName: string; email: string; phone: string }
+      beginProfileEdit: () => void
+      saveProfile: () => Promise<void>
+    }
+
+    expect(setupState.profileEditing).toBe(false)
+
+    setupState.beginProfileEdit()
+    setupState.profileDraft.username = 'volunteer-updated'
+    setupState.profileDraft.realName = '志愿者乙'
+    setupState.profileDraft.email = 'updated@cvs.local'
+    setupState.profileDraft.phone = '13800000000'
+
+    await setupState.saveProfile()
+    await flushPromises()
+
+    expect(updateMyProfileApi).toHaveBeenCalledWith({
+      username: 'volunteer-updated',
+      realName: '志愿者乙',
+      email: 'updated@cvs.local',
+      phone: '13800000000',
+      gender: 'UNKNOWN',
+      avatar: ''
+    })
+    expect(setupState.profileEditing).toBe(false)
   })
 
   it('shows apply records actions and pagination when data exists', async () => {
@@ -286,12 +351,11 @@ describe('Volunteer self-service views', () => {
     const wrapper = mountView(VolunteerMyFavoritesView)
     await flushPromises()
 
-    const setupState = (wrapper.vm as any).$
-      .setupState as {
-        favoriteTitleLabel: (row: Record<string, unknown>) => string
-        favoriteAddressLabel: (row: Record<string, unknown>) => string
-        favoriteScheduleLabel: (row: Record<string, unknown>) => string
-      }
+    const setupState = (wrapper.vm as any).$.setupState as {
+      favoriteTitleLabel: (row: Record<string, unknown>) => string
+      favoriteAddressLabel: (row: Record<string, unknown>) => string
+      favoriteScheduleLabel: (row: Record<string, unknown>) => string
+    }
     const row = {
       activityId: 1,
       activityTitle: '社区清洁行动快照',

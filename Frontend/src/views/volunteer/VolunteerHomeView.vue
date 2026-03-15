@@ -6,9 +6,9 @@
       description="在这里统一完成活动报名、社区交流、公告查看与服务记录跟踪，让每一次志愿行动都可追溯、可沉淀。"
     >
       <template #actions>
-        <el-button type="primary" @click="router.push('/volunteer/activity-center')">去报名活动</el-button>
-        <el-button @click="router.push('/volunteer/apply-records')">查看报名记录</el-button>
-        <el-button @click="router.push('/portal/forum')">进入社区论坛</el-button>
+        <el-button type="primary" @click="router.push(PORTAL_PATHS.activities)">去报名活动</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.selfServiceApplications)">查看报名记录</el-button>
+        <el-button @click="router.push(PORTAL_PATHS.forum)">进入社区论坛</el-button>
       </template>
       <template #aside>
         <div class="hero-stat-grid">
@@ -46,7 +46,7 @@
               <p class="module-eyebrow">统一公告</p>
               <h2 class="section-title">系统公告</h2>
             </div>
-            <el-button text @click="router.push('/portal/notices')">查看全部</el-button>
+            <el-button text @click="router.push(PORTAL_PATHS.notices)">查看全部</el-button>
           </div>
           <StatePanel
             v-if="!home.notices.length"
@@ -65,7 +65,7 @@
               <p class="module-eyebrow">社区论坛</p>
               <h2 class="section-title">论坛热帖</h2>
             </div>
-            <el-button text @click="router.push('/portal/forum')">查看全部</el-button>
+            <el-button text @click="router.push(PORTAL_PATHS.forum)">查看全部</el-button>
           </div>
           <StatePanel
             v-if="!home.hotPosts.length"
@@ -85,7 +85,7 @@
             <p class="module-eyebrow">活动报名</p>
             <h2 class="section-title">近期可报名活动</h2>
           </div>
-          <el-button text @click="router.push('/volunteer/activity-center')">前往活动中心</el-button>
+          <el-button text @click="router.push(PORTAL_PATHS.activities)">前往活动中心</el-button>
         </div>
         <StatePanel
           v-if="!latestActivities.length"
@@ -111,6 +111,7 @@ import { homeApi, type HomePayload } from '@/api/content'
 import { pageActivitiesApi, type ActivityModel } from '@/api/activity'
 import StatePanel from '@/components/shared/StatePanel.vue'
 import WorkspaceHero from '@/components/shared/WorkspaceHero.vue'
+import { PORTAL_PATHS } from '@/constants/portal-routes'
 
 const router = useRouter()
 const userStore = useUserStore()

@@ -6,11 +6,19 @@ html,
 body,
 #app {
   margin: 0;
+  width: 100%;
   min-height: 100%;
+  min-width: 0;
   font-family: var(--cvs-font-family-sans);
   color: var(--cvs-text-main);
   line-height: var(--cvs-line-height-normal);
+  background-color: var(--cvs-color-bg);
   background: var(--cvs-app-background);
+}
+
+html,
+body {
+  overflow-x: hidden;
 }
 
 a {

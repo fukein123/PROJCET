@@ -45,10 +45,14 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/content/home",
                                 "/api/content/dynamics/page",
+                                "/api/content/dynamics/*",
                                 "/api/content/notices/page",
+                                "/api/content/notices/*",
                                 "/api/content/forum/posts/page",
+                                "/api/content/forum/posts/*",
                                 "/api/content/forum/categories",
                                 "/api/content/comments/page",
+                                "/api/content/mall-products/page",
                                 "/api/activity/page",
                                 "/api/activity/categories"
                         ).permitAll()

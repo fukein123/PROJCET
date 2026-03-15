@@ -1,19 +1,43 @@
 <template>
-  <div class="main-layout" :class="roleClass">
+  <div
+    class="main-layout"
+    :class="roleClass"
+    :style="{ '--sidebar-width': appStore.sidebarCollapsed ? '78px' : '268px' }"
+  >
     <aside class="side-panel" :class="{ collapsed: appStore.sidebarCollapsed }">
-      <div class="brand">
-        <BrandMark
-          tone="light"
-          :compact="appStore.sidebarCollapsed"
-          subtitle="统一工作台导航"
-        />
+      <div class="brand-block">
+        <BrandMark tone="light" :compact="appStore.sidebarCollapsed" subtitle="管理员工作台" />
       </div>
-      <div class="role-chip" v-if="!appStore.sidebarCollapsed">{{ roleLabel }}工作台</div>
-      <el-menu :default-active="route.path" class="menu" :collapse="appStore.sidebarCollapsed" router>
-        <el-menu-item v-for="item in menuItems" :key="item.path" :index="item.path">
-          <span>{{ item.title }}</span>
-        </el-menu-item>
-      </el-menu>
+
+      <ElScrollbar class="nav-scroll">
+        <el-menu
+          class="admin-menu"
+          :default-active="activeMenuKey"
+          :default-openeds="defaultOpenGroups"
+          :collapse="appStore.sidebarCollapsed"
+          :collapse-transition="false"
+          unique-opened
+          @select="handleMenuSelect"
+        >
+          <el-menu-item v-if="dashboardMenuItem" :index="dashboardMenuItem.key">
+            <el-icon><HomeFilled /></el-icon>
+            <template #title>{{ dashboardMenuItem.title }}</template>
+          </el-menu-item>
+
+          <el-sub-menu v-for="group in collapsibleGroups" :key="group.key" :index="group.key">
+            <template #title>
+              <el-icon>
+                <component :is="groupIconMap[group.key]" />
+              </el-icon>
+              <span>{{ group.title }}</span>
+            </template>
+
+            <el-menu-item v-for="item in group.items" :key="item.key" :index="item.key">
+              <span class="submenu-text">{{ item.title }}</span>
+            </el-menu-item>
+          </el-sub-menu>
+        </el-menu>
+      </ElScrollbar>
     </aside>
 
     <main class="content-shell">
@@ -22,31 +46,34 @@
           <el-button text class="menu-toggle" @click="appStore.toggleSidebar()">
             {{ appStore.sidebarCollapsed ? '展开菜单' : '收起菜单' }}
           </el-button>
-          <BrandMark class="top-brand" compact subtitle="" />
+
           <div class="page-copy">
-            <span class="page-eyebrow">{{ roleLabel }}工作台</span>
+            <span class="page-eyebrow">{{ currentGroupTitle }}</span>
             <span class="page-title">{{ currentTitle }}</span>
+            <small class="page-desc">{{ currentDescription }}</small>
           </div>
         </div>
+
         <div class="top-right">
-          <el-button v-if="userStore.role !== 'ADMIN'" class="portal-entry" @click="router.push('/portal')">
-            返回门户
-          </el-button>
           <span class="role-badge">{{ roleLabel }}</span>
           <el-dropdown>
             <span class="drop-link">
               <span class="user-avatar">{{ userInitial }}</span>
-              <span class="user-name">{{ userStore.username }}</span>
+              <span class="user-copy">
+                <span class="user-name">{{ userStore.username }}</span>
+                <small class="user-role">后台账号</small>
+              </span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="goProfile">个人中心</el-dropdown-item>
+                <el-dropdown-item @click="goProfile">账号设置</el-dropdown-item>
                 <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
         </div>
       </header>
+
       <section class="page-body">
         <router-view />
       </section>
@@ -56,7 +83,25 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ElScrollbar } from 'element-plus'
+import {
+  Calendar,
+  Files,
+  Goods,
+  HomeFilled,
+  Setting,
+  UserFilled,
+  ChatDotSquare
+} from '@element-plus/icons-vue'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
+import {
+  ADMIN_NAV_GROUPS,
+  type AdminNavGroup,
+  findAdminNavGroupByKey,
+  findAdminNavItemByKey,
+  type AdminNavGroupKey,
+  resolveAdminActiveMenuKey
+} from '@/constants/admin-navigation'
 import BrandMark from '@/components/shared/BrandMark.vue'
 import { useAppStore } from '@/stores/appStore'
 import { useUserStore } from '@/stores/userStore'
@@ -66,238 +111,274 @@ const router = useRouter()
 const appStore = useAppStore()
 const userStore = useUserStore()
 
-const basePath = computed(() => (route.path.startsWith('/admin') ? '/admin' : '/volunteer'))
-const roleLabel = computed(() => (userStore.role === 'ADMIN' ? '管理员' : '志愿者'))
+const dashboardMenuItem = ADMIN_NAV_GROUPS.find((group) => group.key === 'dashboard')?.items[0]
+type CollapsibleAdminNavGroup = AdminNavGroup & {
+  key: Exclude<AdminNavGroupKey, 'dashboard'>
+}
+
+const collapsibleGroups = ADMIN_NAV_GROUPS.filter(
+  (group): group is CollapsibleAdminNavGroup => group.key !== 'dashboard'
+)
+
+const roleLabel = computed(() => (userStore.role === 'ADMIN' ? '管理员后台' : '志愿者工作台'))
 const roleClass = computed(() => (userStore.role === 'ADMIN' ? 'role-admin' : 'role-volunteer'))
 const userInitial = computed(() => (userStore.username?.slice(0, 1) || '志').toUpperCase())
+const activeMenuKey = computed(() => resolveAdminActiveMenuKey(route))
+const currentMenuItem = computed(() => findAdminNavItemByKey(activeMenuKey.value))
+const currentGroup = computed(() =>
+  currentMenuItem.value ? findAdminNavGroupByKey(currentMenuItem.value.groupKey) : undefined
+)
+const currentGroupTitle = computed(() => currentGroup.value?.title || '后台工作台')
+const currentTitle = computed(() => currentMenuItem.value?.title || (route.meta.title as string) || '后台工作台')
+const currentDescription = computed(
+  () => currentMenuItem.value?.description || '围绕志愿活动、内容治理、用户治理和系统配置开展后台操作'
+)
+const defaultOpenGroups = computed(() =>
+  currentGroup.value?.key && currentGroup.value.key !== 'dashboard' ? [currentGroup.value.key] : []
+)
 
-const menuItems = computed(() => {
-  const root = router.getRoutes().find((item) => item.path === basePath.value)
-  if (!root?.children) return []
-  return root.children
-    .filter((item) => !item.meta?.hidden)
-    .map((item) => ({
-      path: `${basePath.value}/${item.path}`,
-      title: (item.meta?.title as string) || item.name || item.path
-    }))
-})
+const groupIconMap: Record<Exclude<AdminNavGroupKey, 'dashboard'>, typeof Files> = {
+  activity: Calendar,
+  content: Files,
+  forum: ChatDotSquare,
+  mall: Goods,
+  user: UserFilled,
+  system: Setting
+}
 
-const currentTitle = computed(() => (route.meta.title as string) || '工作台')
+function navigate(target: RouteLocationRaw) {
+  router.push(target)
+}
+
+function handleMenuSelect(index: string) {
+  const matched = findAdminNavItemByKey(index)
+  if (matched) {
+    navigate(matched.to)
+  }
+}
 
 function logout() {
-  const role = userStore.role
   userStore.logout()
-  router.push(role === 'ADMIN' ? '/login' : '/portal')
+  router.push('/login')
 }
 
 function goProfile() {
-  if (basePath.value === '/admin') {
-    router.push('/admin/settings')
-    return
-  }
-  router.push('/volunteer/profile')
+  router.push('/admin/settings')
 }
 </script>
 
 <style scoped>
 .main-layout {
   display: grid;
-  grid-template-columns: 268px 1fr;
+  grid-template-columns: var(--sidebar-width) 1fr;
   min-height: 100vh;
-  background: var(--cvs-bg);
-  position: relative;
-  overflow: hidden;
-
-  --layout-side-start: #0f4d35;
-  --layout-side-end: #0a2b1f;
-  --layout-side-border: #1f694b;
-  --layout-chip-border: rgba(148, 255, 208, 0.35);
-  --layout-chip-text: #d9ffee;
-  --layout-menu-active-bg: rgba(148, 255, 208, 0.18);
-  --layout-menu-active-text: #ddfff1;
-  --layout-badge-border: rgba(31, 122, 84, 0.3);
-  --layout-badge-text: #1f7a54;
-  --layout-top-bg: rgba(255, 255, 255, 0.84);
-}
-
-.main-layout::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
   background:
-    radial-gradient(circle at 12% 8%, var(--layout-atmo-1), transparent 36%),
-    radial-gradient(circle at 88% 12%, var(--layout-atmo-2), transparent 34%);
+    radial-gradient(circle at 0 0, rgba(31, 122, 84, 0.1), transparent 26%),
+    radial-gradient(circle at 100% 0, rgba(214, 160, 52, 0.08), transparent 24%),
+    linear-gradient(180deg, #f5f7f3 0%, #eef3ee 100%);
 }
 
 .side-panel {
-  background: linear-gradient(180deg, var(--layout-side-start) 0%, var(--layout-side-end) 100%);
-  color: #e5f6ef;
-  border-right: 1px solid var(--layout-side-border);
-  transition: width var(--cvs-motion-base) var(--cvs-ease-standard);
-  width: 268px;
-  z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px 12px;
+  background: linear-gradient(180deg, #123d2b 0%, #103424 100%);
+  border-right: 1px solid rgba(122, 180, 151, 0.18);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.side-panel.collapsed {
-  width: 64px;
+.brand-block {
+  min-height: 44px;
 }
 
-.brand {
-  padding: 16px 14px 10px;
+.nav-scroll {
+  min-height: 0;
 }
 
-.role-chip {
-  margin: 0 16px 8px;
-  padding: 6px 10px;
-  border-radius: var(--cvs-radius-pill);
-  border: 1px solid var(--layout-chip-border);
-  color: var(--layout-chip-text);
-  font-size: var(--cvs-font-size-xs);
-  letter-spacing: 0.06em;
-}
-
-.menu {
-  border-right: none;
+.admin-menu {
+  border: 0;
   background: transparent;
 }
 
-.menu :deep(.el-menu-item) {
-  color: #d6ebe3;
-  border-radius: 10px;
-  margin: 4px 10px;
+.side-panel :deep(.el-menu) {
+  border-right: 0;
+  background: transparent;
 }
 
-.menu :deep(.el-menu-item.is-active) {
-  background: var(--layout-menu-active-bg);
-  color: var(--layout-menu-active-text);
+.side-panel :deep(.el-menu-item),
+.side-panel :deep(.el-sub-menu__title) {
+  height: 44px;
+  line-height: 44px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  color: rgba(239, 247, 243, 0.84);
+  background: transparent;
+}
+
+.side-panel :deep(.el-menu-item:hover),
+.side-panel :deep(.el-sub-menu__title:hover) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.side-panel :deep(.el-menu-item.is-active) {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(39, 140, 95, 0.92), rgba(34, 117, 80, 0.96));
+  box-shadow: 0 8px 18px rgba(10, 33, 24, 0.18);
+}
+
+.side-panel :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: #ffffff;
+}
+
+.side-panel :deep(.el-menu--inline) {
+  background: transparent;
+}
+
+.side-panel :deep(.el-menu--inline .el-menu-item) {
+  height: 38px;
+  line-height: 38px;
+  margin-bottom: 2px;
+  border-radius: 10px;
+  padding-left: 52px !important;
+  color: rgba(229, 243, 236, 0.78);
+}
+
+.side-panel :deep(.el-menu--inline .el-menu-item.is-active) {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.side-panel :deep(.el-sub-menu .el-menu) {
+  padding: 4px 0 8px;
+}
+
+.side-panel.collapsed :deep(.el-menu-item),
+.side-panel.collapsed :deep(.el-sub-menu__title) {
+  justify-content: center;
+  padding-inline: 0 !important;
+}
+
+.submenu-text {
+  font-size: 14px;
 }
 
 .content-shell {
   display: grid;
-  grid-template-rows: 76px 1fr;
-  z-index: 1;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
 }
 
 .top-bar {
-  background: var(--layout-top-bg);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--cvs-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(252, 253, 250, 0.92);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(122, 164, 142, 0.18);
 }
 
-.top-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.top-brand {
-  display: none;
-}
-
-.page-copy {
-  display: grid;
-}
-
-.page-eyebrow {
-  font-size: var(--cvs-font-size-xs);
-  color: var(--cvs-text-sub);
-  letter-spacing: 0.08em;
-}
-
-.page-title {
-  font-weight: var(--cvs-font-weight-bold);
-  font-size: 18px;
-  color: var(--cvs-text-main);
-}
-
+.top-left,
 .top-right {
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
 
-.portal-entry {
-  border-color: var(--layout-badge-border);
-  color: var(--layout-badge-text);
-  background: rgba(255, 255, 255, 0.48);
+.menu-toggle {
+  border-radius: 999px;
+  border: 1px solid rgba(35, 103, 73, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  padding-inline: 14px;
+  color: #174631;
+}
+
+.page-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.page-eyebrow {
+  color: #507162;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.page-title {
+  color: #183224;
+  font-size: 22px;
+  font-weight: var(--cvs-font-weight-heavy);
+  line-height: 1.28;
+}
+
+.page-desc {
+  color: #6b7d74;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .role-badge {
-  border: 1px solid var(--layout-badge-border);
-  color: var(--layout-badge-text);
-  padding: 4px 10px;
-  border-radius: var(--cvs-radius-pill);
-  font-size: var(--cvs-font-size-xs);
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 1px solid rgba(29, 109, 76, 0.16);
+  background: rgba(244, 249, 246, 0.94);
+  color: #1d6d4c;
+  font-size: 12px;
   font-weight: var(--cvs-font-weight-bold);
 }
 
 .drop-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 6px 8px 6px 6px;
+  border-radius: 999px;
   cursor: pointer;
-  font-weight: var(--cvs-font-weight-semibold);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(35, 103, 73, 0.1);
 }
 
 .user-avatar {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   color: #ffffff;
-  background: linear-gradient(135deg, var(--layout-side-start), var(--layout-side-end));
-  font-size: 13px;
-  font-weight: var(--cvs-font-weight-bold);
+  font-weight: var(--cvs-font-weight-heavy);
+  background: linear-gradient(135deg, #1b6e4c, #2f8b66);
+}
+
+.user-copy {
+  display: grid;
 }
 
 .user-name {
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #1d2e26;
+  font-weight: var(--cvs-font-weight-bold);
 }
 
-.main-layout.role-admin {
-  --layout-side-start: #5a1326;
-  --layout-side-end: #300713;
-  --layout-side-border: #7b1f36;
-  --layout-chip-border: rgba(255, 202, 217, 0.42);
-  --layout-chip-text: #ffe0e9;
-  --layout-menu-active-bg: rgba(255, 197, 214, 0.2);
-  --layout-menu-active-text: #ffe9ef;
-  --layout-badge-border: rgba(216, 76, 115, 0.36);
-  --layout-badge-text: #be3056;
-  --layout-top-bg: rgba(255, 246, 249, 0.88);
-  --layout-atmo-1: rgba(220, 66, 110, 0.16);
-  --layout-atmo-2: rgba(245, 170, 90, 0.12);
-}
-
-.main-layout.role-volunteer {
-  --layout-side-start: #0f4d35;
-  --layout-side-end: #0a2b1f;
-  --layout-side-border: #1f694b;
-  --layout-chip-border: rgba(148, 255, 208, 0.35);
-  --layout-chip-text: #d9ffee;
-  --layout-menu-active-bg: rgba(148, 255, 208, 0.18);
-  --layout-menu-active-text: #ddfff1;
-  --layout-badge-border: rgba(31, 122, 84, 0.3);
-  --layout-badge-text: #1f7a54;
-  --layout-top-bg: rgba(245, 255, 251, 0.86);
-  --layout-atmo-1: rgba(26, 141, 95, 0.14);
-  --layout-atmo-2: rgba(75, 175, 138, 0.14);
+.user-role {
+  color: #6b7c75;
+  line-height: 1.4;
 }
 
 .page-body {
-  padding: 16px;
+  padding: 18px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1080px) {
   .main-layout {
     grid-template-columns: 1fr;
   }
@@ -305,18 +386,12 @@ function goProfile() {
   .side-panel {
     display: none;
   }
-
-  .top-brand {
-    display: inline-flex;
-  }
 }
 
 @media (max-width: 720px) {
   .top-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    padding: 14px 16px;
   }
 
   .top-left,
@@ -325,8 +400,8 @@ function goProfile() {
     flex-wrap: wrap;
   }
 
-  .user-name {
-    max-width: 84px;
+  .page-desc {
+    white-space: normal;
   }
 }
 </style>

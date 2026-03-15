@@ -159,8 +159,18 @@ withDefaults(
   line-height: 1.5;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1080px) {
   .workspace-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-aside :deep(.hero-stat-grid) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .hero-aside :deep(.hero-stat-grid) {
     grid-template-columns: 1fr;
   }
 }

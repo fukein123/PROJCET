@@ -21,7 +21,7 @@
 
     <AdminContentSection
       title="活动列表"
-      description="支持查看封面、人数、时间与状态信息，创建、编辑、批量归档、恢复发布与批量删除互不影响列表筛选条件。"
+      description="支持查看封面、人数、时间与状态信息，创建、编辑、归档与恢复发布互不影响列表筛选条件。"
       :loading="loading && !list.length"
       :empty="!loading && !list.length"
       loading-title="正在加载活动列表"
@@ -32,7 +32,6 @@
       <template #actions>
         <el-button type="warning" plain :disabled="!selectedIds.length" @click="batchArchive">批量归档</el-button>
         <el-button plain :disabled="!selectedIds.length" @click="batchRestore">恢复发布</el-button>
-        <el-button type="danger" plain :disabled="!selectedIds.length" @click="batchRemove">批量删除</el-button>
         <el-button type="primary" @click="openCreate">新增活动</el-button>
       </template>
 
@@ -56,16 +55,26 @@
           </template>
         </el-table-column>
         <el-table-column prop="volunteerQuota" label="志愿者人数" width="110" />
+        <el-table-column prop="pointReward" label="活动积分" width="100" />
         <el-table-column prop="targetCount" label="目标人数" width="100" />
         <el-table-column label="时间" min-width="220">
           <template #default="{ row }">
             {{ formatDateTime(row.startTime) }} - {{ formatDateTime(row.endTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="190">
+        <el-table-column label="操作" width="156" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="removeOne(row.id)">删除</el-button>
+            <div class="action-cell">
+              <el-tooltip content="编辑活动" placement="top">
+                <el-button link type="primary" :icon="EditPen" @click="openEdit(row)" />
+              </el-tooltip>
+              <el-tooltip v-if="row.status === 'ARCHIVED'" content="恢复发布" placement="top">
+                <el-button link type="success" :icon="RefreshRight" @click="restoreOne(row.id)" />
+              </el-tooltip>
+              <el-tooltip v-else content="归档活动" placement="top">
+                <el-button link type="warning" :icon="Delete" @click="archiveOne(row.id)" />
+              </el-tooltip>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -153,6 +162,10 @@
             <el-input-number v-model="form.targetCount" :min="1" />
           </el-form-item>
 
+          <el-form-item label="活动积分" prop="pointReward">
+            <el-input-number v-model="form.pointReward" :min="0" />
+          </el-form-item>
+
           <el-form-item label="活动封面" class="span-2">
             <div class="uploader">
               <img :src="form.coverImage || DEFAULT_ACTIVITY_COVER" class="cover-preview" alt="活动封面" />
@@ -170,13 +183,9 @@
             </div>
           </el-form-item>
 
-          <el-form-item label="活动详细描述" prop="description" class="span-2">
-            <el-input
-              v-model="form.description"
-              type="textarea"
-              rows="9"
-              placeholder="建议包含：活动背景、服务流程、注意事项、联系人、物资准备与应急预案"
-            />
+          <el-form-item label="活动详情" prop="description" class="span-2">
+            <RichTextEditor v-model="form.description" placeholder="请按标准模板补充活动背景、服务流程、注意事项等内容" />
+            <span class="field-tip">建议按“活动背景 / 服务流程 / 注意事项 / 联系方式”结构补充详情。</span>
           </el-form-item>
         </div>
       </el-form>
@@ -193,12 +202,13 @@
 import { onMounted, reactive, ref } from 'vue'
 import type { FormInstance, FormRules, UploadProps, UploadRequestOptions } from 'element-plus'
 import { ElMessage } from 'element-plus'
+import { Delete, EditPen, RefreshRight } from '@element-plus/icons-vue'
 import AdminContentSection from '@/components/admin/AdminContentSection.vue'
 import AdminListScaffold from '@/components/admin/AdminListScaffold.vue'
+import RichTextEditor from '@/components/shared/RichTextEditor.vue'
 import { uploadImageApi } from '@/api/common'
 import {
   batchArchiveActivitiesApi,
-  batchDeleteActivitiesApi,
   batchRestoreActivitiesApi,
   createActivityApi,
   deleteActivityApi,
@@ -217,6 +227,8 @@ import {
   getActivityStatusTag
 } from '@/utils/display'
 import { runConfirmedAction } from '@/utils/confirmed-action'
+import { validateElementForm } from '@/utils/form'
+import { richTextToPlainText, sanitizeRichText } from '@/utils/rich-text'
 import { validateImageFile } from '@/utils/upload'
 
 interface ActivityQuery {
@@ -225,6 +237,25 @@ interface ActivityQuery {
   keyword: string
   status: string
 }
+
+const DEFAULT_ACTIVITY_DETAIL_TEMPLATE = `
+<h2>活动背景</h2>
+<p>请补充活动发起背景、服务目标与服务对象。</p>
+<h2>服务流程</h2>
+<ul>
+  <li>集合签到时间与地点</li>
+  <li>现场分工安排</li>
+  <li>服务结束后的签退方式</li>
+</ul>
+<h2>注意事项</h2>
+<ul>
+  <li>请按时到场并服从现场安排</li>
+  <li>如需自备物资请提前说明</li>
+  <li>涉及特殊天气时请关注活动通知</li>
+</ul>
+<h2>联系方式</h2>
+<p>请补充活动联系人、联系电话或对接方式。</p>
+`.trim()
 
 const { loading, records: list, total, query, load, reset, handlePage, handleSizeChange } = useTable<
   ActivityModel,
@@ -263,25 +294,46 @@ const form = reactive<Partial<ActivityModel>>({
   status: 'PUBLISHED',
   targetCount: 20,
   volunteerQuota: 20,
+  pointReward: 0,
   content: '',
   description: '',
   coverImage: ''
 })
 
+function validatePositiveCount(_: unknown, value: number, callback: (error?: Error) => void) {
+  if (value == null || Number.isNaN(Number(value)) || Number(value) <= 0) {
+    callback(new Error('请输入大于 0 的人数'))
+    return
+  }
+  callback()
+}
+
+function validateNonNegativeNumber(_: unknown, value: number, callback: (error?: Error) => void) {
+  if (value == null || Number.isNaN(Number(value)) || Number(value) < 0) {
+    callback(new Error('请输入大于等于 0 的数值'))
+    return
+  }
+  callback()
+}
+
 const rules: FormRules = {
   title: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
   categoryId: [{ required: true, message: '请选择活动分类', trigger: 'change' }],
+  status: [{ required: true, message: '请选择活动状态', trigger: 'change' }],
   startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
   endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }],
   content: [{ required: true, message: '请输入活动内容', trigger: 'blur' }],
   address: [{ required: true, message: '请输入活动地点', trigger: 'blur' }],
-  volunteerQuota: [{ required: true, message: '请输入志愿者人数', trigger: 'change' }],
-  targetCount: [{ required: true, message: '请输入目标人数', trigger: 'change' }],
+  volunteerQuota: [{ required: true, validator: validatePositiveCount, trigger: 'change' }],
+  targetCount: [{ required: true, validator: validatePositiveCount, trigger: 'change' }],
+  pointReward: [{ required: true, validator: validateNonNegativeNumber, trigger: 'change' }],
   description: [{ required: true, message: '请填写活动详细描述', trigger: 'blur' }]
 }
 
 function syncRangeToTime(value: [string, string] | null) {
   if (!value) {
+    form.startTime = ''
+    form.endTime = ''
     return
   }
 
@@ -321,8 +373,9 @@ function openCreate() {
     status: 'PUBLISHED',
     targetCount: 20,
     volunteerQuota: 20,
+    pointReward: 0,
     content: '',
-    description: '',
+    description: DEFAULT_ACTIVITY_DETAIL_TEMPLATE,
     coverImage: ''
   })
   activityRange.value = []
@@ -337,11 +390,9 @@ function openEdit(row: ActivityModel) {
 }
 
 async function submit() {
-  if (!formRef.value) {
+  if (!(await validateElementForm(formRef.value))) {
     return
   }
-
-  await formRef.value.validate()
   const start = new Date(form.startTime as string).getTime()
   const end = new Date(form.endTime as string).getTime()
   if (Number.isFinite(start) && Number.isFinite(end) && end <= start) {
@@ -349,10 +400,28 @@ async function submit() {
     return
   }
 
+  const payload = {
+    ...form,
+    title: String(form.title || '').trim(),
+    content: String(form.content || '').trim(),
+    address: String(form.address || '').trim(),
+    description: sanitizeRichText(form.description)
+  }
+
+  if (!payload.content) {
+    ElMessage.warning('请输入活动简介')
+    return
+  }
+
+  if (!richTextToPlainText(payload.description)) {
+    ElMessage.warning('请完善活动详情内容')
+    return
+  }
+
   if (editingId.value) {
-    await updateActivityApi(editingId.value, form)
+    await updateActivityApi(editingId.value, payload)
   } else {
-    await createActivityApi(form)
+    await createActivityApi(payload)
   }
 
   drawerVisible.value = false
@@ -360,30 +429,25 @@ async function submit() {
   await load()
 }
 
-async function removeOne(id: number) {
+async function archiveOne(id: number) {
   await runConfirmedAction({
-    message: '删除后将同步清理报名、打卡与收藏记录，确认继续？',
-    title: '删除活动',
+    message: '确认归档该活动吗？归档后活动会从前台下线，但历史报名、打卡与收藏记录会保留。',
+    title: '归档活动',
+    type: 'warning',
+    confirmButtonText: '确认归档',
     action: () => deleteActivityApi(id),
-    successMessage: '活动已删除',
+    successMessage: '活动已归档',
     afterSuccess: load
   })
 }
 
-async function batchRemove() {
-  if (!selectedIds.value.length) {
-    return
-  }
-
+async function restoreOne(id: number) {
   await runConfirmedAction({
-    message: `确认批量删除 ${selectedIds.value.length} 个活动？`,
-    title: '批量删除活动',
-    action: () => batchDeleteActivitiesApi(selectedIds.value),
-    successMessage: '批量删除成功',
-    afterSuccess: async () => {
-      clearSelection()
-      await load()
-    }
+    message: '确认恢复发布该活动吗？恢复后志愿者侧可再次查看和报名。',
+    title: '恢复发布活动',
+    action: () => batchRestoreActivitiesApi([id]),
+    successMessage: '活动已恢复发布',
+    afterSuccess: load
   })
 }
 
@@ -393,9 +457,10 @@ async function batchArchive() {
   }
 
   await runConfirmedAction({
-    message: `确认批量归档 ${selectedIds.value.length} 个活动？归档后志愿者侧不再展示。`,
+    message: `确认将选中的 ${selectedIds.value.length} 个活动归档吗？归档后前台不再展示，但历史报名与打卡记录会保留。`,
     title: '批量归档活动',
     type: 'warning',
+    confirmButtonText: '确认归档',
     action: () => batchArchiveActivitiesApi(selectedIds.value),
     successMessage: '批量归档成功',
     afterSuccess: async () => {
@@ -413,8 +478,9 @@ async function batchRestore() {
   await runConfirmedAction({
     message: `确认将选中的 ${selectedIds.value.length} 个活动恢复为已发布状态？`,
     title: '恢复发布活动',
+    confirmButtonText: '确认恢复',
     action: () => batchRestoreActivitiesApi(selectedIds.value),
-    successMessage: '批量恢复成功',
+    successMessage: '活动已批量恢复发布',
     afterSuccess: async () => {
       clearSelection()
       await load()
@@ -426,6 +492,10 @@ onMounted(async () => {
   categories.value = await listCategoriesApi()
   await load()
 })
+
+defineExpose({
+  batchArchive
+})
 </script>
 
 <style scoped>
@@ -435,6 +505,12 @@ onMounted(async () => {
   border-radius: 8px;
   object-fit: cover;
   border: 1px solid var(--cvs-border);
+}
+
+.action-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .drawer-form {
@@ -470,6 +546,14 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.field-tip {
+  display: block;
+  margin-top: 8px;
+  color: var(--cvs-text-sub);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 :deep(.activity-dialog .el-dialog__body) {

@@ -1,7 +1,6 @@
 package com.community.modules.activity.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,33 +10,36 @@ import java.time.LocalDateTime;
 
 @Data
 public class ActivityRequest {
-    @NotBlank(message = "请输入活动标题")
+    @NotBlank(message = "Activity title is required")
     private String title;
 
-    @NotNull(message = "请选择活动分类")
+    @NotNull(message = "Activity category is required")
     private Long categoryId;
 
-    @NotNull(message = "请选择开始时间")
+    @NotNull(message = "Start time is required")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;
 
-    @NotNull(message = "请选择结束时间")
-    @Future(message = "结束时间必须晚于当前时间")
+    @NotNull(message = "End time is required")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
 
-    @NotBlank(message = "请输入活动地址")
+    @NotBlank(message = "Activity address is required")
     private String address;
 
-    @NotNull(message = "请输入目标人数")
-    @Min(value = 1, message = "目标人数不能小于 1")
+    @NotNull(message = "Target count is required")
+    @Min(value = 1, message = "Target count must be greater than 0")
     private Integer targetCount;
 
-    @NotNull(message = "请输入志愿者人数")
-    @Min(value = 1, message = "志愿者人数不能小于 1")
+    @NotNull(message = "Volunteer quota is required")
+    @Min(value = 1, message = "Volunteer quota must be greater than 0")
     private Integer volunteerQuota;
 
-    @NotBlank(message = "请输入活动内容")
+    @NotNull(message = "Point reward is required")
+    @Min(value = 0, message = "Point reward must be greater than or equal to 0")
+    private Integer pointReward;
+
+    @NotBlank(message = "Activity content is required")
     private String content;
 
     private String description;

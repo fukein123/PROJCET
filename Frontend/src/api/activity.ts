@@ -19,6 +19,7 @@ export interface ActivityModel {
   status: string
   targetCount: number
   volunteerQuota: number
+  pointReward: number
   content: string
   description: string
   coverImage?: string
@@ -29,9 +30,12 @@ export interface ApplicationModel {
   id: number
   activityId: number
   activityTitle?: string
+  activityStartTime?: string
+  activityEndTime?: string
   userId: number
   username?: string
   realName?: string
+  applyReason?: string
   status: string
   rejectReason?: string
   applyTime: string
@@ -43,6 +47,9 @@ export interface CheckRecordModel {
   activityId: number
   activityTitle?: string
   activityAddress?: string
+  userId?: number
+  username?: string
+  realName?: string
   activityStartTime?: string
   activityEndTime?: string
   signInTime?: string
@@ -112,8 +119,15 @@ export function batchRestoreActivitiesApi(ids: number[]) {
   return request.post('/api/activity/batch-restore', { ids })
 }
 
-export function applyActivityApi(activityId: number) {
-  return request.post(`/api/activity/${activityId}/apply`)
+export function applyActivityApi(activityId: number, payload?: { applyReason?: string }) {
+  const applyReason = (payload?.applyReason || '申请参加活动').trim()
+  return request.post<never, ApplicationModel>(`/api/activity/${activityId}/apply`, {
+    applyReason: applyReason || '申请参加活动'
+  })
+}
+
+export function undoActivityApplicationApi(id: number) {
+  return request.delete(`/api/activity/applications/${id}/undo`)
 }
 
 export function pageApplicationsApi(params: { current: number; size: number; activityId?: number; status?: string }) {
@@ -138,4 +152,15 @@ export function signOutApi(payload: { applicationId: number }) {
 
 export function myCheckRecordsApi(params: { current: number; size: number }) {
   return request.get<never, PageResult<CheckRecordModel>>('/api/activity/sign/my-records', { params })
+}
+
+export function pageCheckRecordsApi(params: {
+  current: number
+  size: number
+  activityId?: number
+  userId?: number
+  status?: string
+  keyword?: string
+}) {
+  return request.get<never, PageResult<CheckRecordModel>>('/api/activity/sign/page', { params })
 }

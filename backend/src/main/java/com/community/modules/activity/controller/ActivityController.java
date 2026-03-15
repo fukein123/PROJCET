@@ -3,12 +3,14 @@ package com.community.modules.activity.controller;
 import com.community.common.dto.IdListRequest;
 import com.community.common.web.ApiResponse;
 import com.community.common.web.PageResult;
+import com.community.modules.activity.dto.ActivityApplyRequest;
 import com.community.modules.activity.dto.ActivityCategoryRequest;
 import com.community.modules.activity.dto.ActivityApplicationView;
 import com.community.modules.activity.dto.ActivityRequest;
 import com.community.modules.activity.dto.ApplicationAuditRequest;
 import com.community.modules.activity.dto.CheckRecordView;
 import com.community.modules.activity.dto.SignRequest;
+import com.community.modules.activity.entity.ActivityApplication;
 import com.community.modules.activity.entity.Activity;
 import com.community.modules.activity.entity.ActivityCategory;
 import com.community.modules.activity.service.ActivityService;
@@ -106,20 +108,20 @@ public class ActivityController {
         return ApiResponse.success("updated", null);
     }
 
-    @Operation(summary = "Admin - delete activity")
+    @Operation(summary = "Admin - archive activity (delete alias)")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         activityService.deleteActivity(id);
-        return ApiResponse.success("deleted", null);
+        return ApiResponse.success("archived", null);
     }
 
-    @Operation(summary = "Admin - batch delete activities")
+    @Operation(summary = "Admin - batch archive activities (delete alias)")
     @PostMapping("/batch-delete")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> batchDelete(@Valid @RequestBody IdListRequest request) {
         activityService.batchDeleteActivities(request.getIds());
-        return ApiResponse.success("batch deleted", null);
+        return ApiResponse.success("batch archived", null);
     }
 
     @Operation(summary = "Admin - batch archive activities")
@@ -141,9 +143,8 @@ public class ActivityController {
     @Operation(summary = "Volunteer - apply for activity")
     @PostMapping("/{activityId}/apply")
     @PreAuthorize("hasRole('VOLUNTEER')")
-    public ApiResponse<Void> apply(@PathVariable Long activityId) {
-        activityService.applyForActivity(activityId);
-        return ApiResponse.success("applied", null);
+    public ApiResponse<ActivityApplication> apply(@PathVariable Long activityId, @Valid @RequestBody ActivityApplyRequest request) {
+        return ApiResponse.success("applied", activityService.applyForActivity(activityId, request.getApplyReason()));
     }
 
     @Operation(summary = "Admin - page all applications")
@@ -164,6 +165,14 @@ public class ActivityController {
                                                                            @RequestParam(required = false) Long activityId,
                                                                            @RequestParam(required = false) String status) {
         return ApiResponse.success(activityService.pageApplications(current, size, activityId, status, true));
+    }
+
+    @Operation(summary = "Volunteer - undo my application")
+    @DeleteMapping("/applications/{id}/undo")
+    @PreAuthorize("hasRole('VOLUNTEER')")
+    public ApiResponse<Void> undoApplication(@PathVariable Long id) {
+        activityService.undoActivityApplication(id);
+        return ApiResponse.success("undone", null);
     }
 
     @Operation(summary = "Admin - audit application")
@@ -196,5 +205,17 @@ public class ActivityController {
     public ApiResponse<PageResult<CheckRecordView>> myRecords(@RequestParam(defaultValue = "1") long current,
                                                                @RequestParam(defaultValue = "10") long size) {
         return ApiResponse.success(activityService.myCheckRecords(current, size));
+    }
+
+    @Operation(summary = "Admin - page all sign records")
+    @GetMapping("/sign/page")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<PageResult<CheckRecordView>> pageCheckRecords(@RequestParam(defaultValue = "1") long current,
+                                                                     @RequestParam(defaultValue = "10") long size,
+                                                                     @RequestParam(required = false) Long activityId,
+                                                                     @RequestParam(required = false) Long userId,
+                                                                     @RequestParam(required = false) String status,
+                                                                     @RequestParam(required = false) String keyword) {
+        return ApiResponse.success(activityService.pageCheckRecords(current, size, activityId, userId, status, keyword));
     }
 }

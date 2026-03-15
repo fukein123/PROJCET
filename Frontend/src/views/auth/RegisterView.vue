@@ -1,92 +1,93 @@
 <template>
-  <div class="register-scene">
+  <div class="register-page">
     <section class="register-hero fade-up">
       <p class="hero-tag">社区志愿服务平台</p>
-      <h1>成为社区志愿者，让每一份善意都能被看见</h1>
-      <ul class="hero-list">
-        <li>坚持公益导向，围绕“服务社区、关爱邻里、共建共享”开展志愿行动。</li>
-        <li>建立可追溯的服务档案，完整记录报名、打卡、反馈与成长轨迹。</li>
-        <li>倡导长期参与与互助精神，让志愿服务从“活动”走向“常态”。</li>
-      </ul>
+      <h1>注册志愿者账号，进入社区志愿服务主页面</h1>
+      <p class="hero-copy">
+        注册后可直接在主页面完成活动报名、打卡记录、论坛互动、积分兑换和个人资料维护。
+      </p>
     </section>
 
     <section class="register-shell fade-up">
       <el-card class="register-card" shadow="never">
         <header class="card-head">
           <h2>志愿者注册</h2>
-          <p>请按顺序完善账号信息，提交后将跳转到登录页面。</p>
+          <p>请按顺序填写注册信息。</p>
         </header>
 
-        <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="register-form">
-          <div class="form-grid">
-            <el-form-item label="志愿者账号" prop="username">
-              <el-input v-model.trim="form.username" placeholder="请输入志愿者账号" />
-            </el-form-item>
+        <el-form
+          ref="formRef"
+          :model="form"
+          :rules="rules"
+          label-position="top"
+          class="register-form"
+          @keydown.enter.prevent="submitRegister"
+        >
+          <el-form-item label="用户名" prop="username">
+            <el-input v-model.trim="form.username" placeholder="请输入登录用账号" />
+          </el-form-item>
 
-            <el-form-item label="密码" prop="password">
-              <el-input
-                v-model="form.password"
-                type="password"
-                show-password
-                placeholder="至少 6 位，包含字母和数字"
-              />
-            </el-form-item>
+          <el-form-item label="姓名" prop="realName">
+            <el-input v-model.trim="form.realName" placeholder="请输入真实姓名" />
+          </el-form-item>
 
-            <el-form-item label="确认密码" prop="confirmPassword">
-              <el-input v-model="form.confirmPassword" type="password" show-password placeholder="请再次输入密码" />
-            </el-form-item>
+          <el-form-item label="密码" prop="password">
+            <el-input
+              v-model="form.password"
+              type="password"
+              show-password
+              placeholder="至少 6 位，需包含字母和数字"
+            />
+          </el-form-item>
 
-            <el-form-item label="志愿者姓名" prop="realName">
-              <el-input v-model.trim="form.realName" placeholder="请输入真实姓名" />
-            </el-form-item>
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input v-model="form.confirmPassword" type="password" show-password placeholder="请再次输入密码" />
+          </el-form-item>
 
-            <el-form-item class="span-2" label="头像" prop="avatar">
-              <div class="avatar-panel">
-                <el-upload
-                  class="avatar-upload"
-                  :show-file-list="false"
-                  :http-request="handleAvatarUpload"
-                  :before-upload="beforeAvatarUpload"
-                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                >
-                  <div class="upload-box">
-                    <img v-if="form.avatar" class="avatar-preview" :src="form.avatar" alt="头像预览" />
-                    <template v-else>
-                      <span class="plus">+</span>
-                      <span class="upload-text">点击上传头像</span>
-                    </template>
-                  </div>
-                </el-upload>
+          <el-form-item label="邮箱" prop="email">
+            <el-input v-model.trim="form.email" placeholder="请输入邮箱地址" />
+          </el-form-item>
 
-                <div class="avatar-actions">
-                  <el-button size="small" :loading="avatarUploading" @click="triggerUpload">选择图片</el-button>
-                  <el-button size="small" text @click="clearAvatar">清空头像</el-button>
-                  <span class="tip">支持 JPG/PNG/WEBP/GIF，大小不超过 5MB</span>
-                </div>
+          <el-form-item label="头像（可选）">
+            <div class="avatar-panel">
+              <div class="avatar-preview-shell">
+                <el-avatar class="avatar-preview" :size="88" :src="avatarPreview" />
               </div>
-            </el-form-item>
 
-            <el-form-item label="联系电话" prop="phone">
-              <el-input v-model.trim="form.phone" placeholder="请输入手机号" />
-            </el-form-item>
+              <div class="avatar-info">
+                <div class="avatar-action-group">
+                  <el-upload
+                    class="avatar-upload"
+                    :show-file-list="false"
+                    :http-request="handleAvatarUpload"
+                    :before-upload="beforeAvatarUpload"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                  >
+                    <el-button class="avatar-button" type="primary" plain :loading="avatarUploading">选择头像</el-button>
+                  </el-upload>
+                </div>
 
-            <el-form-item label="邮箱" prop="email">
-              <el-input v-model.trim="form.email" placeholder="请输入邮箱地址" />
-            </el-form-item>
+                <span class="tip">支持 JPG / PNG / WEBP / GIF，单张不超过 5MB。</span>
+              </div>
+            </div>
+          </el-form-item>
 
-            <el-form-item label="性别" prop="gender">
-              <el-select v-model="form.gender" placeholder="请选择性别">
-                <el-option label="男" value="MALE" />
-                <el-option label="女" value="FEMALE" />
-                <el-option label="保密" value="UNKNOWN" />
-              </el-select>
-            </el-form-item>
-          </div>
+          <el-form-item label="性别" prop="gender">
+            <el-select v-model="form.gender" placeholder="请选择性别">
+              <el-option label="男" value="MALE" />
+              <el-option label="女" value="FEMALE" />
+              <el-option label="保密" value="UNKNOWN" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="手机号" prop="phone">
+            <el-input v-model.trim="form.phone" placeholder="请输入手机号" />
+          </el-form-item>
         </el-form>
 
         <div class="action-row">
-          <el-button type="primary" :loading="loading" @click="submitRegister">立即注册</el-button>
-          <el-button @click="router.push('/login')">已有账号，去登录</el-button>
+          <el-button @click="router.push('/login')">已有账号？去登录</el-button>
+          <el-button type="primary" :loading="loading" @click="submitRegister">注册</el-button>
         </div>
       </el-card>
     </section>
@@ -94,12 +95,13 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import type { FormInstance, FormRules, UploadProps, UploadRequestOptions } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { registerApi } from '@/api/auth'
 import { uploadImageApi } from '@/api/common'
+import { validateElementForm } from '@/utils/form'
 import { validateImageFile } from '@/utils/upload'
 import { isPhone, isStrongPassword } from '@/utils/validate'
 
@@ -113,6 +115,8 @@ interface RegisterForm {
   gender: string
   avatar: string
 }
+
+const defaultAvatar = 'https://cdn.jsdelivr.net/gh/fukexin123/assets/default-avatar.png'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
@@ -130,12 +134,17 @@ const form = reactive<RegisterForm>({
   avatar: ''
 })
 
+const avatarPreview = computed(() => form.avatar || defaultAvatar)
+
 const rules: FormRules<RegisterForm> = {
-  username: [{ required: true, message: '请输入志愿者账号', trigger: 'blur' }],
-  realName: [{ required: true, message: '请输入志愿者姓名', trigger: 'blur' }],
-  email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '邮箱格式不正确', trigger: ['blur', 'change'] }
+  ],
   phone: [
-    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { required: true, message: '请输入手机号', trigger: 'blur' },
     {
       validator: (_rule, value: string, callback) => {
         if (!isPhone(value)) {
@@ -177,15 +186,6 @@ const rules: FormRules<RegisterForm> = {
 
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => validateImageFile(rawFile)
 
-function triggerUpload() {
-  const trigger = document.querySelector('.avatar-upload input[type=file]') as HTMLInputElement | null
-  trigger?.click()
-}
-
-function clearAvatar() {
-  form.avatar = ''
-}
-
 async function handleAvatarUpload(option: UploadRequestOptions) {
   avatarUploading.value = true
   try {
@@ -202,11 +202,10 @@ async function handleAvatarUpload(option: UploadRequestOptions) {
 }
 
 async function submitRegister() {
-  if (!formRef.value) {
+  if (!(await validateElementForm(formRef.value))) {
     return
   }
 
-  await formRef.value.validate()
   loading.value = true
   try {
     await registerApi({
@@ -228,23 +227,27 @@ async function submitRegister() {
 </script>
 
 <style scoped>
-.register-scene {
+.register-page {
   min-height: 100vh;
+  padding: 36px 16px 48px;
   display: grid;
-  grid-template-columns: 1fr 1.15fr;
+  justify-items: center;
+  gap: 18px;
   background:
-    radial-gradient(circle at 14% 12%, rgba(24, 113, 79, 0.22), transparent 40%),
-    radial-gradient(circle at 88% 85%, rgba(225, 170, 63, 0.2), transparent 36%),
-    linear-gradient(160deg, #f7fbf8 0%, #edf3ee 100%);
+    radial-gradient(circle at 12% 12%, rgba(16, 100, 69, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 10%, rgba(231, 167, 63, 0.14), transparent 28%),
+    linear-gradient(180deg, #f7fbf8 0%, #eef3ef 100%);
 }
 
 .register-hero {
-  padding: 68px 64px;
+  width: min(560px, 100%);
+  text-align: center;
+  display: grid;
+  gap: 12px;
 }
 
 .hero-tag {
-  display: inline-flex;
-  margin: 0 0 14px;
+  margin: 0 auto;
   padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid rgba(21, 101, 71, 0.24);
@@ -255,31 +258,26 @@ async function submitRegister() {
 
 .register-hero h1 {
   margin: 0;
-  line-height: 1.3;
-  font-size: clamp(30px, 4vw, 44px);
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.28;
   color: #173a2c;
 }
 
-.hero-list {
-  margin: 24px 0 0;
-  padding-left: 20px;
-  color: #405750;
-  line-height: 1.9;
+.hero-copy {
+  margin: 0;
+  color: #536660;
+  line-height: 1.8;
 }
 
 .register-shell {
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: min(560px, 100%);
 }
 
 .register-card {
-  width: min(700px, 100%);
-  border-radius: 18px;
+  border-radius: 20px;
   border: 1px solid var(--cvs-border);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 18px 40px rgba(28, 54, 44, 0.1);
-  background: rgba(255, 255, 255, 0.95);
 }
 
 .card-head h2 {
@@ -290,99 +288,104 @@ async function submitRegister() {
 .card-head p {
   margin: 8px 0 0;
   color: var(--cvs-text-sub);
+  line-height: 1.7;
 }
 
 .register-form {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-}
-
-.span-2 {
-  grid-column: span 2;
+.register-form :deep(.el-select) {
+  width: 100%;
 }
 
 .avatar-panel {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 14px;
   align-items: center;
-  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(207, 217, 211, 0.92);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(248, 251, 249, 0.98), rgba(255, 255, 255, 0.98));
 }
 
-.upload-box {
-  width: 168px;
-  height: 86px;
-  border-radius: 24px;
-  border: 1px dashed #cfdad2;
-  background: #f4f6f5;
+.avatar-preview-shell {
+  width: 100px;
+  height: 100px;
   display: grid;
   place-items: center;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.plus {
-  font-size: 44px;
-  line-height: 1;
-  color: #6a706d;
-}
-
-.upload-text {
-  margin-top: -4px;
-  font-size: 13px;
-  color: #6a706d;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #f5f8f6, #eef4f1);
+  border: 1px solid rgba(31, 122, 84, 0.1);
 }
 
 .avatar-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  border: 4px solid rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 0 0 1px rgba(31, 122, 84, 0.12),
+    0 10px 22px rgba(27, 56, 43, 0.08);
+  background: #f3f5f4;
 }
 
-.avatar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+.avatar-info {
+  display: grid;
   gap: 8px;
+  min-width: 0;
+  align-content: center;
+  justify-items: start;
+}
+
+.avatar-action-group {
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+
+.avatar-upload :deep(.el-upload) {
+  display: flex;
+}
+
+.avatar-button {
+  min-width: 112px;
 }
 
 .tip {
   color: #65756f;
   font-size: 12px;
+  line-height: 1.6;
 }
 
 .action-row {
-  margin-top: 10px;
+  margin-top: 16px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-@media (max-width: 1020px) {
-  .register-scene {
+@media (max-width: 640px) {
+  .register-page {
+    padding-inline: 12px;
+  }
+
+  .avatar-panel {
     grid-template-columns: 1fr;
+    justify-items: start;
   }
 
-  .register-hero {
-    padding: 30px 22px 8px;
+  .avatar-preview-shell {
+    width: 92px;
+    height: 92px;
   }
 
-  .register-shell {
-    padding: 8px 16px 30px;
-  }
-}
-
-@media (max-width: 760px) {
-  .form-grid {
-    grid-template-columns: 1fr;
+  .avatar-action-group,
+  .action-row {
+    flex-direction: column;
   }
 
-  .span-2 {
-    grid-column: span 1;
+  .avatar-action-group :deep(.el-button),
+  .action-row :deep(.el-button) {
+    width: 100%;
   }
 }
 </style>

@@ -1,13 +1,18 @@
 import request from '@/utils/request'
+import type { AdminOperationLogItem } from './audit'
 
 export interface DashboardPayload {
   activityCount: number
   postCount: number
   commentCount: number
   volunteerCount: number
+  orderCount: number
+  pendingApplicationCount: number
+  pendingPostCount: number
   weeklyApplicationTrend: Array<{ day: string; value: number }>
   activityTypeBar: Array<{ name: string; value: number }>
   postTypePie: Array<{ name: string; value: number }>
+  recentOperationLogs: AdminOperationLogItem[]
 }
 
 export function adminDashboardApi() {

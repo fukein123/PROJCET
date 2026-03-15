@@ -30,10 +30,8 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
-      logic-delete-field: deleted
       id-type: auto
 
 pagehelper:
@@ -51,5 +49,5 @@ springdoc:
 app:
   upload-dir: uploads
   jwt:
-    secret: "CVS_SUPER_LONG_JWT_SECRET_KEY_FOR_JAVA21_AND_SPRINGBOOT3_2026_SECURE"
+    secret: ${APP_JWT_SECRET:CVS_DEV_ONLY_CHANGE_ME_BEFORE_DEPLOYMENT_2026}
     expire-seconds: 86400

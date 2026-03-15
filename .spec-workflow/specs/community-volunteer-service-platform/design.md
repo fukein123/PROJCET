@@ -8,6 +8,7 @@
 - 保持后端统一返回契约（`ApiResponse` + `PageResult`）和角色鉴权边界。
 - 保持前端页面能力复用优先（`useTable`、`useSelectionIds`、`runConfirmedAction` 等）。
 - 保持迭代可交付性（构建、编译、冒烟验证可重复执行，规格与文档同步更新）。
+- 必须优先并积极使用 skill，将 skill 作为排查问题、浏览器联调、验证、文档处理和交付核查的默认入口；只要存在匹配 skill，就不能回避或被动使用。
 
 ## Steering Document Alignment
 
@@ -110,7 +111,7 @@ graph TD
 - **Purpose:** 保证规格、审批、文档、验证命令形成闭环。
 - **Interfaces:** `.spec-workflow/specs/*` 文档资产；`scripts/local-approval.ps1` 审批工具。
 - **Dependencies:** `.approval-workflow/` 审批记录、`file/` 治理文档。
-- **Reuses:** 已建立的聊天审批 + 本地落档流程。
+- **Reuses:** 已建立的聊天审批 + 本地落档流程，以及基于 skill 的验证与交付流程。
 
 ## Data Models
 

@@ -1,21 +1,26 @@
 package com.community.modules.content.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.community.common.exception.BusinessException;
 import com.community.common.util.SecurityUtil;
 import com.community.common.web.PageResult;
 import com.community.modules.content.entity.BannerInfo;
 import com.community.modules.content.entity.CommentInfo;
+import com.community.modules.content.entity.ExchangeOrder;
 import com.community.modules.content.entity.FavoriteActivity;
 import com.community.modules.content.entity.ForumCategory;
 import com.community.modules.content.entity.ForumPost;
 import com.community.modules.content.entity.InfoDynamic;
+import com.community.modules.content.entity.MallProduct;
 import com.community.modules.content.entity.NoticeInfo;
 import com.community.modules.content.mapper.BannerInfoMapper;
 import com.community.modules.content.mapper.CommentInfoMapper;
+import com.community.modules.content.mapper.ExchangeOrderMapper;
 import com.community.modules.content.mapper.FavoriteActivityMapper;
 import com.community.modules.content.mapper.ForumCategoryMapper;
 import com.community.modules.content.mapper.ForumPostMapper;
 import com.community.modules.content.mapper.InfoDynamicMapper;
+import com.community.modules.content.mapper.MallProductMapper;
 import com.community.modules.content.mapper.NoticeInfoMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
@@ -24,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +42,8 @@ public class ContentQueryService {
     private final ForumPostMapper forumPostMapper;
     private final CommentInfoMapper commentInfoMapper;
     private final FavoriteActivityMapper favoriteActivityMapper;
+    private final MallProductMapper mallProductMapper;
+    private final ExchangeOrderMapper exchangeOrderMapper;
 
     public PageResult<InfoDynamic> pageDynamics(long current, long size, String type, String keyword, boolean onlyPublished) {
         LambdaQueryWrapper<InfoDynamic> wrapper = new LambdaQueryWrapper<>();
@@ -57,6 +65,14 @@ public class ContentQueryService {
                 .last("limit 5"));
     }
 
+    public InfoDynamic detailDynamic(Long id) {
+        InfoDynamic dynamic = infoDynamicMapper.selectById(id);
+        if (dynamic == null || (!isAdmin() && !Objects.equals(dynamic.getStatus(), 1))) {
+            throw new BusinessException(404, "Dynamic not found");
+        }
+        return dynamic;
+    }
+
     public PageResult<NoticeInfo> pageNotices(long current, long size, boolean onlyPublished) {
         LambdaQueryWrapper<NoticeInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(onlyPublished, NoticeInfo::getStatus, 1)
@@ -67,6 +83,14 @@ public class ContentQueryService {
         return new PageResult<>(pageInfo.getTotal(), current, size, records);
     }
 
+    public NoticeInfo detailNotice(Long id) {
+        NoticeInfo notice = noticeInfoMapper.selectById(id);
+        if (notice == null || (!isAdmin() && !Objects.equals(notice.getStatus(), 1))) {
+            throw new BusinessException(404, "Notice not found");
+        }
+        return notice;
+    }
+
     public List<BannerInfo> listBanners() {
         return bannerInfoMapper.selectList(new LambdaQueryWrapper<BannerInfo>()
                 .eq(BannerInfo::getStatus, 1)
@@ -74,9 +98,21 @@ public class ContentQueryService {
                 .orderByDesc(BannerInfo::getCreateTime));
     }
 
+    public List<BannerInfo> listBannersForAdmin() {
+        return bannerInfoMapper.selectList(new LambdaQueryWrapper<BannerInfo>()
+                .orderByAsc(BannerInfo::getSort)
+                .orderByDesc(BannerInfo::getCreateTime));
+    }
+
     public List<ForumCategory> listForumCategories() {
         return forumCategoryMapper.selectList(new LambdaQueryWrapper<ForumCategory>()
                 .eq(ForumCategory::getStatus, 1)
+                .orderByAsc(ForumCategory::getSort)
+                .orderByDesc(ForumCategory::getCreateTime));
+    }
+
+    public List<ForumCategory> listForumCategoriesForAdmin() {
+        return forumCategoryMapper.selectList(new LambdaQueryWrapper<ForumCategory>()
                 .orderByAsc(ForumCategory::getSort)
                 .orderByDesc(ForumCategory::getCreateTime));
     }
@@ -105,6 +141,22 @@ public class ContentQueryService {
         List<ForumPost> records = forumPostMapper.selectList(wrapper);
         PageInfo<ForumPost> pageInfo = new PageInfo<>(records);
         return new PageResult<>(pageInfo.getTotal(), current, size, records);
+    }
+
+    public ForumPost detailForumPost(Long id) {
+        ForumPost post = forumPostMapper.selectById(id);
+        if (post == null) {
+            throw new BusinessException(404, "Post not found");
+        }
+
+        Long userId = SecurityUtil.currentUserId();
+        boolean canView = isAdmin()
+                || "APPROVED".equalsIgnoreCase(post.getStatus())
+                || (userId != null && userId.equals(post.getUserId()));
+        if (!canView) {
+            throw new BusinessException(404, "Post not found");
+        }
+        return post;
     }
 
     public PageResult<CommentInfo> pageComments(long current,
@@ -144,5 +196,79 @@ public class ContentQueryService {
                 .orderByDesc(FavoriteActivity::getCreateTime));
         PageInfo<FavoriteActivity> pageInfo = new PageInfo<>(records);
         return new PageResult<>(pageInfo.getTotal(), current, size, records);
+    }
+
+    public PageResult<MallProduct> pageMallProducts(long current, long size, String keyword, Integer status, boolean onlyEnabled) {
+        LambdaQueryWrapper<MallProduct> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(StringUtils.hasText(keyword), MallProduct::getName, keyword)
+                .eq(status != null, MallProduct::getStatus, status)
+                .eq(onlyEnabled, MallProduct::getStatus, 1)
+                .orderByDesc(MallProduct::getCreateTime);
+        PageHelper.startPage((int) current, (int) size);
+        List<MallProduct> records = mallProductMapper.selectList(wrapper);
+        PageInfo<MallProduct> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
+    }
+
+    public PageResult<ExchangeOrder> pageMyExchangeOrders(long current, long size, String status) {
+        LambdaQueryWrapper<ExchangeOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ExchangeOrder::getUserId, SecurityUtil.currentUserId())
+                .eq(StringUtils.hasText(status), ExchangeOrder::getStatus, status)
+                .orderByDesc(ExchangeOrder::getCreateTime);
+        PageHelper.startPage((int) current, (int) size);
+        List<ExchangeOrder> records = exchangeOrderMapper.selectList(wrapper);
+        PageInfo<ExchangeOrder> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
+    }
+
+    public PageResult<ExchangeOrder> pageAdminExchangeOrders(long current,
+                                                             long size,
+                                                             String orderNo,
+                                                             String productKeyword,
+                                                             String userKeyword,
+                                                             String status) {
+        LambdaQueryWrapper<ExchangeOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(StringUtils.hasText(orderNo), ExchangeOrder::getOrderNo, orderNo)
+                .like(StringUtils.hasText(productKeyword), ExchangeOrder::getProductName, productKeyword)
+                .and(StringUtils.hasText(userKeyword), q -> q.like(ExchangeOrder::getUserName, userKeyword)
+                        .or().like(ExchangeOrder::getRealName, userKeyword))
+                .eq(StringUtils.hasText(status), ExchangeOrder::getStatus, status)
+                .orderByDesc(ExchangeOrder::getCreateTime);
+        PageHelper.startPage((int) current, (int) size);
+        List<ExchangeOrder> records = exchangeOrderMapper.selectList(wrapper);
+        records.forEach(this::maskOrderForAdminList);
+        PageInfo<ExchangeOrder> pageInfo = new PageInfo<>(records);
+        return new PageResult<>(pageInfo.getTotal(), current, size, records);
+    }
+
+    public ExchangeOrder detailAdminExchangeOrder(Long id) {
+        ExchangeOrder order = exchangeOrderMapper.selectById(id);
+        if (order == null) {
+            throw new BusinessException(404, "Exchange order not found");
+        }
+        return order;
+    }
+
+    private boolean isAdmin() {
+        return "ADMIN".equalsIgnoreCase(SecurityUtil.currentRole());
+    }
+
+    private void maskOrderForAdminList(ExchangeOrder order) {
+        order.setReceiverPhone(maskPhone(order.getReceiverPhone()));
+        order.setReceiverAddress(maskAddress(order.getReceiverAddress()));
+    }
+
+    private String maskPhone(String value) {
+        if (!StringUtils.hasText(value) || value.length() <= 7) {
+            return value;
+        }
+        return value.substring(0, 3) + "****" + value.substring(value.length() - 4);
+    }
+
+    private String maskAddress(String value) {
+        if (!StringUtils.hasText(value) || value.length() <= 10) {
+            return value;
+        }
+        return value.substring(0, 6) + "****" + value.substring(value.length() - 4);
     }
 }

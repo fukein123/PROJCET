@@ -26,14 +26,21 @@
       <el-card class="auth-card fade-up" shadow="never">
         <header class="card-head">
           <h2>账号登录</h2>
-          <p>请选择登录入口，系统将按角色进入对应工作台。</p>
+          <p>请选择登录入口，系统会按角色进入对应页面。</p>
         </header>
 
-        <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="auth-form">
+        <el-form
+          ref="formRef"
+          :model="form"
+          :rules="rules"
+          label-position="top"
+          class="auth-form"
+          @keydown.enter.prevent="submitLogin"
+        >
           <el-form-item prop="role" label="登录入口">
             <el-select v-model="form.role" placeholder="请选择登录入口">
-              <el-option label="管理员登录" value="ADMIN" />
               <el-option label="志愿者登录" value="VOLUNTEER" />
+              <el-option label="管理员登录" value="ADMIN" />
             </el-select>
           </el-form-item>
 
@@ -70,6 +77,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
+import { validateElementForm } from '@/utils/form'
 
 interface LoginForm {
   role: 'ADMIN' | 'VOLUNTEER'
@@ -84,12 +92,9 @@ const userStore = useUserStore()
 const loading = ref(false)
 const formRef = ref<FormInstance>()
 const captchaCode = ref('')
-const lastRoleStorageKey = 'cvs:last-login-role'
-const lastRole = localStorage.getItem(lastRoleStorageKey)
-const defaultRole: LoginForm['role'] = lastRole === 'VOLUNTEER' ? 'VOLUNTEER' : 'ADMIN'
 
 const form = reactive<LoginForm>({
-  role: defaultRole,
+  role: 'VOLUNTEER',
   username: '',
   password: '',
   captchaInput: ''
@@ -110,8 +115,7 @@ function refreshCaptcha() {
 }
 
 async function submitLogin() {
-  if (!formRef.value) return
-  await formRef.value.validate()
+  if (!(await validateElementForm(formRef.value))) return
   if (form.captchaInput.toUpperCase() !== captchaCode.value) {
     ElMessage.error('验证码错误，请重新输入')
     form.captchaInput = ''
@@ -126,7 +130,6 @@ async function submitLogin() {
       password: form.password,
       role: form.role
     })
-    localStorage.setItem(lastRoleStorageKey, form.role)
 
     const redirect = (route.query.redirect as string) || ''
     if (redirect) {

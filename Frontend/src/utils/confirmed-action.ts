@@ -8,10 +8,10 @@ interface ConfirmedActionPromptOptions {
   inputValidator?: (value: string) => boolean | string
 }
 
-interface ConfirmedActionOptions {
+interface ConfirmedActionOptions<T> {
   message: string
   title: string
-  action: (promptValue?: string) => Promise<unknown> | unknown
+  action: (promptValue?: string) => Promise<T> | T
   successMessage?: string
   afterSuccess?: () => Promise<void> | void
   type?: 'success' | 'warning' | 'info' | 'error'
@@ -20,7 +20,7 @@ interface ConfirmedActionOptions {
   prompt?: ConfirmedActionPromptOptions
 }
 
-export async function runConfirmedAction({
+export async function runConfirmedAction<T>({
   message,
   title,
   action,
@@ -30,7 +30,7 @@ export async function runConfirmedAction({
   confirmButtonText = '确定',
   cancelButtonText = '取消',
   prompt
-}: ConfirmedActionOptions) {
+}: ConfirmedActionOptions<T>) {
   let promptValue: string | undefined
 
   if (prompt) {
@@ -52,11 +52,12 @@ export async function runConfirmedAction({
     })
   }
 
-  await action(promptValue)
+  const result = await action(promptValue)
 
   if (successMessage) {
     ElMessage.success(successMessage)
   }
 
   await afterSuccess?.()
+  return result
 }
